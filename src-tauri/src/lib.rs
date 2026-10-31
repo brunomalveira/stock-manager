@@ -1,5 +1,6 @@
 use tauri::menu::{ContextMenu, MenuBuilder, MenuItemBuilder, SubmenuBuilder};
-use tauri::Emitter;
+use tauri::tray::TrayIconBuilder;
+use tauri::{Emitter, Manager};
 use tauri_plugin_sql::{Migration, MigrationKind};
 
 /// Local SQLite database. The file lives in the OS app-data directory for
@@ -141,7 +142,57 @@ pub fn run() {
                 }
             }
         })
+        .on_window_event(|window, event| {
+            // Closing the window hides it: the app keeps running in the
+            // background and the alarm timer keeps firing. Quit via the tray
+            // menu, ⌘Q, or the Dock. (Phase 2b adds a launchd agent for
+            // restart-survival.)
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+                let _ = window.hide();
+            }
+        })
+        .setup(|app| {
+            // Tray icon: makes the background state visible and controllable.
+            let open = MenuItemBuilder::with_id("tray-open", "Open Stock Manager").build(app)?;
+            let quit = MenuItemBuilder::with_id("tray-quit", "Quit Stock Manager").build(app)?;
+            let tray_menu = MenuBuilder::new(app)
+                .item(&open)
+                .separator()
+                .item(&quit)
+                .build()?;
+            let _tray = TrayIconBuilder::with_id("main-tray")
+                .icon(app.default_window_icon().unwrap().clone())
+                .menu(&tray_menu)
+                .show_menu_on_left_click(true)
+                .on_menu_event(|app, event| {
+                    if event.id().0 == "tray-open" {
+                        if let Some(w) = app.get_webview_window("main") {
+                            let _ = w.show();
+                            let _ = w.set_focus();
+                        }
+                    } else if event.id().0 == "tray-quit" {
+                        app.exit(0);
+                    }
+                })
+                .build(app)?;
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![show_item_menu])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app, event| {
+            // Clicking the Dock icon with no visible window reopens it (macOS).
+            #[cfg(target_os = "macos")]
+            if let tauri::RunEvent::Reopen { .. } = event {
+                if let Some(w) = app.get_webview_window("main") {
+                    let _ = w.show();
+                    let _ = w.set_focus();
+                }
+            }
+            #[cfg(not(target_os = "macos"))]
+            {
+                let _ = (app, event);
+            }
+        });
 }
