@@ -17,8 +17,6 @@ Instructions for coding agents (and humans) working in this repository.
 
 ## Harness
 
-Imported from the CSA workspace (`csa_ai_boundary_system`) and adapted for this project:
-
 - `docs/harness/_INDEX.md` — harness index: read it before any change.
 - `docs/harness/SUPERPOWERS.md` — which skills to use when, and precedence.
 - `docs/harness/TESTING.md` — test layers, commands, and extension rules.
