@@ -117,9 +117,13 @@ CREATE TABLE items (
   `src/styles.css`) with a full dark-mode pass; on WebKit they resolve to the
   real dynamic system colors.
 
-**Planned UI work (approved, not yet built):**
-- Native menu bar, standard keyboard shortcuts, row context menus.
-- DESIGN.md token spec (palette + typography as tokens).
+- Native menu bar, standard keyboard shortcuts (⌘N Add Item, standard Edit
+  menu), and native context menus on item rows (Tauri menu API).
+- DESIGN.md token spec at the project root (`npx @google/design.md lint
+  DESIGN.md` validates it; tokens mirror `src/styles.css`).
+- Background running: closing the window hides it — the app keeps running and
+  the alarm timer keeps firing; a tray icon (Open / Quit) and the Dock click
+  reopen it. The launchd agent (phase 2b) adds restart-survival later.
 
 **Out of scope (do not build without asking):**
 - Stock movements / in-out history log
