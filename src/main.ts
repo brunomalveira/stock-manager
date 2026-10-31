@@ -1,4 +1,6 @@
 import Database from "@tauri-apps/plugin-sql";
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { isPermissionGranted, requestPermission, sendNotification } from "@tauri-apps/plugin-notification";
 import { alertBody, shouldAlert } from "./alerts";
 import {
@@ -112,6 +114,7 @@ function render(): void {
   tbody.replaceChildren();
   for (const item of items) {
     const tr = document.createElement("tr");
+    tr.dataset.id = String(item.id);
     const p = projection(item);
     const alerting = p !== null && isAlerting(item, p);
     if (alerting) tr.className = "warn-row";
@@ -312,6 +315,31 @@ window.addEventListener("DOMContentLoaded", async () => {
   addBtn.addEventListener("click", openForm);
   form.addEventListener("submit", (e) => void handleSubmit(e));
   cancelBtn.addEventListener("click", closeForm);
+
+  // Native app menu: Add Item (⌘N).
+  await listen("menu://add-item", () => openForm());
+  // Native context menu on rows (right-click): Edit / Delete.
+  await listen<{ action: "edit" | "delete"; id: number }>(
+    "item-menu://action",
+    (e) => {
+      const item = items.find((i) => i.id === e.payload.id);
+      if (!item) return;
+      if (e.payload.action === "edit") {
+        openForm();
+        startEdit(item);
+      } else {
+        void removeItem(item);
+      }
+    },
+  );
+  // Right-click a row → the OS context menu.
+  tbody.addEventListener("contextmenu", (e) => {
+    const target = e.target as HTMLElement;
+    const row = target.closest<HTMLElement>("tr[data-id]");
+    if (!row) return;
+    e.preventDefault();
+    void invoke("show_item_menu", { id: Number(row.dataset.id) });
+  });
 
   tbody.addEventListener("click", (e) => {
     const target = e.target as HTMLElement;
