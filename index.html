@@ -52,9 +52,14 @@
           <input type="checkbox" id="launch-at-login" />
           Launch at login <span class="check-hint">(starts hidden in the tray)</span>
         </label>
+        <div class="row actions">
+          <button type="button" id="export-csv-btn">Export CSV…</button>
+          <button type="button" id="import-csv-btn">Import CSV…</button>
+        </div>
       </section>
 
       <p id="error" class="error" hidden></p>
+      <p id="status" class="status" hidden></p>
 
       <div class="content">
         <table id="items">

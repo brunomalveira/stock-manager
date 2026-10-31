@@ -84,10 +84,23 @@ fn show_item_menu(app: tauri::AppHandle, id: i64, window: tauri::Window) -> Resu
     menu.popup(window).map_err(|e| e.to_string())
 }
 
+/// Writes a text file (CSV export, path from the save dialog).
+#[tauri::command]
+fn write_text_file(path: String, contents: String) -> Result<(), String> {
+    std::fs::write(path, contents).map_err(|e| e.to_string())
+}
+
+/// Reads a text file (CSV import, path from the open dialog).
+#[tauri::command]
+fn read_text_file(path: String) -> Result<String, String> {
+    std::fs::read_to_string(path).map_err(|e| e.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_autostart::init(
             MacosLauncher::LaunchAgent,
             // Launched at login: start hidden — the tray icon and the alarm
@@ -110,6 +123,11 @@ pub fn run() {
                 .separator()
                 .quit()
                 .build()?;
+            // File menu: CSV export/import.
+            let file_menu = SubmenuBuilder::new(app, "File")
+                .item(&MenuItemBuilder::with_id("export-csv", "Export CSV…").build(app)?)
+                .item(&MenuItemBuilder::with_id("import-csv", "Import CSV…").build(app)?)
+                .build()?;
             // Standard Edit menu — makes copy/paste work in text fields.
             let edit_menu = SubmenuBuilder::new(app, "Edit")
                 .undo()
@@ -125,6 +143,7 @@ pub fn run() {
                 .build(app)?;
             MenuBuilder::new(app)
                 .item(&app_menu)
+                .item(&file_menu)
                 .item(&edit_menu)
                 .item(&add_item)
                 .build()
@@ -133,6 +152,10 @@ pub fn run() {
             let id = event.id().0.clone();
             if id == "add-item" {
                 let _ = app.emit("menu://add-item", ());
+            } else if id == "export-csv" {
+                let _ = app.emit("menu://export-csv", ());
+            } else if id == "import-csv" {
+                let _ = app.emit("menu://import-csv", ());
             } else if let Some(rest) = id.strip_prefix("edit-") {
                 if let Ok(item_id) = rest.parse::<i64>() {
                     let _ = app.emit(
@@ -192,7 +215,11 @@ pub fn run() {
                 .build(app)?;
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![show_item_menu])
+        .invoke_handler(tauri::generate_handler![
+            show_item_menu,
+            write_text_file,
+            read_text_file
+        ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|app, event| {
