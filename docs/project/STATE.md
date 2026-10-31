@@ -6,10 +6,10 @@ close — current status only, no history chain.
 ## Current status
 
 - **Updated:** 2026-10-31
-- **Phase:** background running (close = hide, tray, alarms keep firing) — implementing on `feat/background-running`
-- **Branch:** `feat/background-running` → merging to `main` via PR
+- **Phase:** complete — CRUD, consumption alarm, notifications, macOS UI, background running, launch at login (all merged to `main`)
+- **Branch:** `main`
 - **Remote:** `git@github.com:brunomalveira/stock-manager.git` (private, GitHub)
-- **In progress:** user verification of the background behavior
+- **In progress:** nothing
 - **Blockers:** none
 - **Commit authorization:** granted for feature/fix commits on feature branches
-- **Next step:** merge this PR; later: planned UI steps and the launchd agent (phase 2b, restart-survival) when asked
+- **Next step:** build the macOS bundle on the Mac (`npm run tauri build`); the stock database is per-machine — items entered here do not appear on the Mac; pending UI features: none (out-of-scope list in AGENTS.md needs an explicit ask)
