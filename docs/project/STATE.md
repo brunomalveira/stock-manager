@@ -6,7 +6,7 @@ close — current status only, no history chain.
 ## Current status
 
 - **Updated:** 2026-10-31
-- **Phase:** complete — CRUD, consumption alarm, notifications, macOS UI, background running, launch at login, CSV export/import (all merged to `main`)
+- **Phase:** complete — CRUD, consumption alarm, notifications, macOS UI, background running, launch at login, CSV export/import, `npm run setup` environment script (all merged to `main`)
 - **Branch:** `main`
 - **Remote:** `git@github.com:brunomalveira/stock-manager.git` (private, GitHub)
 - **In progress:** nothing — no approved implementation steps pending
