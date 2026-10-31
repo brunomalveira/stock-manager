@@ -35,6 +35,7 @@ Branch model: code work happens on `feat/<keyword>` branches from `main`; doc-on
 - **Tauri 2** — Rust core + system webview (small binaries, no bundled browser).
 - **Frontend:** Vite + TypeScript, plain DOM (no UI framework unless discussed first).
 - **Database:** SQLite through the official `tauri-plugin-sql` plugin (Rust crate `tauri-plugin-sql` with the `sqlite` feature, JS package `@tauri-apps/plugin-sql`). DB file stored in the OS app-data directory — never inside the install dir or the repo.
+- **Notifications:** `tauri-plugin-notification` (native OS notifications — local only, no network, no accounts).
 - **Testing:** Vitest (frontend unit) + `cargo test` integration tests over the real migrations — see `docs/harness/TESTING.md`.
 - **Package manager:** npm.
 
@@ -84,6 +85,7 @@ CREATE TABLE items (
   consumed_per_day     REAL,          -- optional; NULL = no projection for this item
   alert_threshold_days REAL,          -- optional; NULL = no alarm for this item
   last_stocked_at      TEXT,          -- set on every quantity change (stock event)
+  last_alerted_at      TEXT,          -- anti-spam state; set when the alarm notification fires
   created_at           TEXT NOT NULL, -- ISO 8601
   updated_at           TEXT NOT NULL  -- ISO 8601
 );
@@ -91,12 +93,13 @@ CREATE TABLE items (
 
 - `quantity` is REAL because units like kg allow decimals; display trims trailing zeros (`2` not `2.0`).
 - Alarm projection: `remaining ≈ quantity − consumed_per_day × days_since(last_stocked_at)`; days-to-zero = `remaining / consumed_per_day`; alert when days-to-zero ≤ `alert_threshold_days`.
-- Migrations so far: 1 creates the table; 2–4 add the alarm columns; 5 backfills `last_stocked_at` from `created_at`.
+- Alarm re-alert rule: at most one notification per item per day (`last_alerted_at`); a quantity change (stock event) resets it.
+- Migrations so far: 1 creates the table; 2–4 add the alarm columns; 5 backfills `last_stocked_at` from `created_at`; 6 adds `last_alerted_at` (anti-spam state).
 - Only new migrations may be added; existing ones are immutable. sqlx checksums each migration's SQL text — **even re-indenting an applied migration breaks every `Database.load()`** ("migration was previously applied but has been modified"). Never touch an applied migration's string; add a new migration instead.
 
 ## Scope
 
-**v1 — items CRUD + stock consumption alarm:**
+**v1 — items CRUD + stock consumption alarm + native notifications:**
 - One screen: list of items (name, quantity + unit), sorted by name.
 - Add an item (name, quantity, unit, notes).
 - Edit any field; quick quantity adjust (+/-).
@@ -104,10 +107,13 @@ CREATE TABLE items (
 - Consumption projection & alarm (optional per item): consumed-per-day +
   alert-threshold fields; projection of remaining stock since
   `last_stocked_at`; row-level warning when days-to-zero ≤ threshold.
+- Native OS notifications when an item crosses its threshold (in-app timer,
+  checked every 5 min; at most one alert per item per day). Phase 2 (launchd
+  background agent) is approved and built when asked.
 
 **Out of scope (do not build without asking):**
 - Stock movements / in-out history log
-- System notifications (the alarm is visual-only for now)
+- Remote alert channels (email/WhatsApp) — decided against; alerts stay local
 - Categories, tags, filtering beyond basic search
 - CSV export, backup/restore
 - Multi-user anything, network anything
@@ -115,7 +121,7 @@ CREATE TABLE items (
 ## Conventions
 
 - TypeScript in strict mode; no `any`.
-- Pure logic lives in exported modules (e.g. `src/projection.ts`), never inside DOM/event code — see `docs/harness/TESTING.md`.
+- Pure logic lives in exported modules (e.g. `src/projection.ts`, `src/alerts.ts`), never inside DOM/event code — see `docs/harness/TESTING.md`.
 - All SQL is parameterized (`$1, $2` placeholders via plugin-sql) — never interpolate user input into SQL strings.
 - Errors surfaced by Rust/plugins are shown to the user as a visible message; never swallow them silently.
 - Keep the UI minimal and keyboard-friendly; no spinner libraries, no CSS frameworks.
