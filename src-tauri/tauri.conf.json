@@ -15,7 +15,13 @@
       {
         "title": "Stock Manager",
         "width": 860,
-        "height": 640
+        "height": 640,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "transparent": true,
+        "windowEffects": {
+          "effects": ["sidebar"]
+        }
       }
     ],
     "security": {

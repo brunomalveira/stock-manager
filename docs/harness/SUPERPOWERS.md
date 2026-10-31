@@ -20,6 +20,7 @@ excalidraw-diagram-generator); the agent runtime provides the process skills
 | simplify-code | after a chunk of changes lands | cleanup pass, one concern at a time |
 | dogfood | QA of the running app | exploratory testing with evidence |
 | excalidraw-diagram-generator | planning UI/architecture | `.excalidraw` files under `docs/diagrams/` |
+| apple-design | any UI design or review work (HIG-grounded) | repo-local in `.agents/skills/apple-design/` — load its SKILL.md + the pages for what is on screen; quote and cite |
 | git-commit | any commit task (mandatory per `.agents/rules/git-commit-rule.md`) | staging + conventional message generation |
 
 ## Precedence

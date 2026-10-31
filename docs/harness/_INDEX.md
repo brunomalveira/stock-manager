@@ -24,7 +24,7 @@ place** — current status only, no history chain.
 ## Skills
 
 Repo-local skill catalog lives in `.agents/skills/` (git-commit,
-excalidraw-diagram-generator). Process skills (TDD, debugging, review, ...)
-live in the agent runtime — see `SUPERPOWERS.md`.
+excalidraw-diagram-generator, apple-design). Process skills (TDD, debugging,
+review, ...) live in the agent runtime — see `SUPERPOWERS.md`.
 
 *Adapted from `csa_ai_boundary_system` (`docs/harness/_INDEX.md`).*

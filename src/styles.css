@@ -11,17 +11,73 @@ body {
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   font-size: 14px;
   line-height: 1.5;
+  /* Solid fallback — on Linux/Windows the window is not transparent. */
+  background: #f5f5f7;
+  color: #1d1d1f;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #1e1e20;
+    color: #f5f5f7;
+  }
+}
+
+/* macOS only (class set from main.ts): the window is transparent with the
+   sidebar vibrancy material (tauri.conf.json windowEffects), so the body
+   must be transparent to let it show. */
+html.macos body {
+  background: transparent;
 }
 
 .container {
   max-width: 920px;
   margin: 0 auto;
-  padding: 24px 16px 48px;
+  padding: 0 16px 48px;
 }
 
-h1 {
-  font-size: 20px;
-  margin: 0 0 16px;
+/* Functional layer: the toolbar floats over the content and stays legible
+   with a blur (Liquid Glass: glass belongs on controls, never on content). */
+.toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  margin: 0 -16px 16px;
+  background: rgba(245, 245, 247, 0.72);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  .toolbar {
+    background: rgba(30, 30, 32, 0.72);
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* Clear the macOS traffic lights: with titleBarStyle "Overlay" they sit on
+   top of the toolbar. Linux/Windows keep a normal title bar — no extra pad. */
+html.macos .toolbar {
+  padding-top: 40px;
+}
+
+.toolbar h1 {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  margin: 0;
+  flex: 1;
+}
+
+.count {
+  font-size: 12px;
+  color: rgba(128, 128, 128, 1);
+  font-variant-numeric: tabular-nums;
 }
 
 h2 {
@@ -30,10 +86,20 @@ h2 {
 }
 
 #item-form {
-  border: 1px solid rgba(128, 128, 128, 0.35);
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
   padding: 12px 16px 14px;
   margin-bottom: 16px;
+}
+
+@media (prefers-color-scheme: dark) {
+  #item-form {
+    background: rgba(48, 48, 50, 0.85);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
 }
 
 .row {
@@ -103,6 +169,21 @@ button:hover {
   margin: 0 0 12px;
 }
 
+/* Content layer: solid surface, never glass (Liquid Glass rule). */
+.content {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 10px;
+  padding: 4px 8px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .content {
+    background: #262628;
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -113,6 +194,10 @@ td {
   text-align: left;
   padding: 8px 10px;
   border-bottom: 1px solid rgba(128, 128, 128, 0.25);
+}
+
+tr:last-child td {
+  border-bottom: none;
 }
 
 th {
@@ -174,4 +259,6 @@ td button + button {
 
 #empty {
   color: rgba(128, 128, 128, 1);
+  padding: 16px 10px;
+  margin: 0;
 }
