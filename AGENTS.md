@@ -21,6 +21,7 @@ Imported from the CSA workspace (`csa_ai_boundary_system`) and adapted for this 
 
 - `docs/harness/_INDEX.md` — harness index: read it before any change.
 - `docs/harness/SUPERPOWERS.md` — which skills to use when, and precedence.
+- `docs/harness/TESTING.md` — test layers, commands, and extension rules.
 - `docs/project/STATE.md` — single status registry (phase, branch, blockers, next step). Replaced in place at session close; no history.
 - `.agents/rules/` — binding rules: `harness-binding-rule.md`, `branch-rule.md`, `git-commit-rule.md`.
 - `.agents/skills/git-commit/` — atomic conventional commits (mandatory for any commit; see `.agents/rules/git-commit-rule.md`).
@@ -34,17 +35,19 @@ Branch model: code work happens on `feat/<keyword>` branches from `main`; doc-on
 - **Tauri 2** — Rust core + system webview (small binaries, no bundled browser).
 - **Frontend:** Vite + TypeScript, plain DOM (no UI framework unless discussed first).
 - **Database:** SQLite through the official `tauri-plugin-sql` plugin (Rust crate `tauri-plugin-sql` with the `sqlite` feature, JS package `@tauri-apps/plugin-sql`). DB file stored in the OS app-data directory — never inside the install dir or the repo.
+- **Testing:** Vitest (frontend unit) + `cargo test` integration tests over the real migrations — see `docs/harness/TESTING.md`.
 - **Package manager:** npm.
 
 ## Project layout (Tauri 2 + Vite)
 
 ```
-src/                  # frontend: index.html, TypeScript, CSS
+src/                  # frontend: index.html, TypeScript, CSS, pure logic modules (*.ts) + unit tests (*.test.ts)
 src-tauri/            # Rust core
-  src/                # main.rs, lib.rs (commands, plugin registration)
+  src/                # main.rs, lib.rs (migrations, plugin registration)
+  tests/              # integration tests: migrations + app SQL against in-memory SQLite
   tauri.conf.json     # app config — identifier below must stay stable
   capabilities/       # Tauri 2 permission files
-  migrations are defined in the plugin setup (see Data model)
+  migrations are defined in lib.rs::migrations() (see Data model)
 ```
 
 The bundle identifier is `com.brunomalveira.stockmanager`. Changing it changes the app-data path and orphans the user's data — do not change it.
@@ -56,7 +59,8 @@ npm install           # first setup (frontend deps)
 npm run tauri dev     # run the app with hot reload — main development loop
 npm run tauri build   # produce installers/bundles for the current OS
 npm run build         # typecheck + build the frontend only
-cargo test            # Rust unit tests (run inside src-tauri/), when tests exist
+npm test              # frontend unit tests (Vitest) — projection math, alert rule
+cargo test            # Rust integration tests (run inside src-tauri/) — migrations + app SQL
 ```
 
 Toolchain prerequisites: Node.js ≥ 20, Rust (stable), Tauri CLI v2 (devDependency `@tauri-apps/cli`).
@@ -68,7 +72,7 @@ Toolchain prerequisites: Node.js ≥ 20, Rust (stable), Tauri CLI v2 (devDepende
 
 ## Data model
 
-Single `items` table, created via a `migrations` list passed to `tauri-plugin-sql`:
+Single `items` table, created via the migrations list in `lib.rs::migrations()`:
 
 ```sql
 CREATE TABLE items (
@@ -111,6 +115,7 @@ CREATE TABLE items (
 ## Conventions
 
 - TypeScript in strict mode; no `any`.
+- Pure logic lives in exported modules (e.g. `src/projection.ts`), never inside DOM/event code — see `docs/harness/TESTING.md`.
 - All SQL is parameterized (`$1, $2` placeholders via plugin-sql) — never interpolate user input into SQL strings.
 - Errors surfaced by Rust/plugins are shown to the user as a visible message; never swallow them silently.
 - Keep the UI minimal and keyboard-friendly; no spinner libraries, no CSS frameworks.
@@ -118,7 +123,8 @@ CREATE TABLE items (
 
 ## Definition of done (verify before finishing any change)
 
-1. `npm run tauri dev` starts without errors and no console errors appear in devtools.
-2. The changed flow was exercised by hand: add → edit → delete an item, then restart the app and confirm the data persisted.
-3. `npm run build` (typecheck) passes.
-4. No new dependencies were added, or each one is justified in the summary.
+1. `cargo test` (inside `src-tauri/`) and `npm test` pass — add tests for new logic per `docs/harness/TESTING.md`.
+2. `npm run build` (typecheck) passes.
+3. `npm run tauri dev` starts without errors and no console errors appear in devtools.
+4. The changed flow was exercised by hand: add → edit → delete an item, then restart the app and confirm the data persisted.
+5. No new dependencies were added, or each one is justified in the summary.

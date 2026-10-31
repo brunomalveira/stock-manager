@@ -6,6 +6,7 @@ Before implementing any change, agents MUST read the following:
 |---|---|
 | `AGENTS.md` (root) | Entry point: ground rules, stack, data model, scope, Definition of done |
 | `SUPERPOWERS.md` (this dir) | Skills usage table + precedence |
+| `TESTING.md` (this dir) | Test layers, commands, and extension rules |
 | `docs/project/STATE.md` | Single status registry — current phase, branch, blockers, next step |
 
 Session lifecycle (folded from CSA's `STATE-PROCESS.md`): read `STATE.md`
