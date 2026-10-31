@@ -7,6 +7,12 @@ import {
   projection,
 } from "./projection";
 
+// macOS gets the transparent window + vibrancy (tauri.conf.json windowEffects);
+// other platforms keep the solid fallback background from styles.css.
+if (navigator.userAgent.includes("Macintosh")) {
+  document.documentElement.classList.add("macos");
+}
+
 interface Item {
   id: number;
   name: string;
@@ -41,6 +47,8 @@ const errorEl = document.querySelector("#error") as HTMLElement;
 const itemsTable = document.querySelector("#items") as HTMLTableElement;
 const tbody = document.querySelector("#items-body") as HTMLTableSectionElement;
 const emptyEl = document.querySelector("#empty") as HTMLElement;
+const addBtn = document.querySelector("#add-btn") as HTMLButtonElement;
+const itemCount = document.querySelector("#item-count") as HTMLElement;
 
 function showError(message: string): void {
   errorEl.textContent = message;
@@ -60,6 +68,18 @@ function resetForm(): void {
   cancelBtn.hidden = true;
 }
 
+/** Shows the add/edit sheet (macOS toolbar → sheet pattern). */
+function openForm(): void {
+  form.hidden = false;
+  nameInput.focus();
+}
+
+/** Hides the sheet and resets it. */
+function closeForm(): void {
+  resetForm();
+  form.hidden = true;
+}
+
 function startEdit(item: Item): void {
   editingId = item.id;
   nameInput.value = item.name;
@@ -71,7 +91,6 @@ function startEdit(item: Item): void {
   formTitle.textContent = "Edit item";
   submitBtn.textContent = "Save changes";
   cancelBtn.hidden = false;
-  nameInput.focus();
 }
 
 async function refresh(): Promise<void> {
@@ -80,6 +99,8 @@ async function refresh(): Promise<void> {
   );
   emptyEl.hidden = items.length > 0;
   itemsTable.hidden = items.length === 0;
+  itemCount.hidden = items.length === 0;
+  itemCount.textContent = `${items.length} item${items.length === 1 ? "" : "s"}`;
   render();
 }
 
@@ -178,7 +199,7 @@ async function removeItem(item: Item): Promise<void> {
   );
   if (!confirmed) return;
   await db.execute("DELETE FROM items WHERE id = $1", [item.id]);
-  if (editingId === item.id) resetForm();
+  if (editingId === item.id) closeForm();
   await refresh();
 }
 
@@ -228,9 +249,9 @@ async function handleSubmit(event: Event): Promise<void> {
         "UPDATE items SET name = $1, quantity = $2, unit = $3, notes = $4, consumed_per_day = $5, alert_threshold_days = $6, updated_at = $7, last_stocked_at = $8 WHERE id = $9",
         [name, quantity, unit, notes, consumed, alertDays, now, lastStocked, editingId],
       );
-      resetForm();
     }
     await refresh();
+    closeForm();
   } catch (e) {
     showError(`Database error: ${e instanceof Error ? e.message : String(e)}`);
   }
@@ -251,8 +272,9 @@ window.addEventListener("DOMContentLoaded", async () => {
     unitSelect.append(option);
   }
 
+  addBtn.addEventListener("click", openForm);
   form.addEventListener("submit", (e) => void handleSubmit(e));
-  cancelBtn.addEventListener("click", resetForm);
+  cancelBtn.addEventListener("click", closeForm);
 
   tbody.addEventListener("click", (e) => {
     const target = e.target as HTMLElement;
@@ -264,7 +286,10 @@ window.addEventListener("DOMContentLoaded", async () => {
       void adjustQuantity(id, Number(button.dataset.delta));
     } else if (action === "edit") {
       const item = items.find((i) => i.id === id);
-      if (item) startEdit(item);
+      if (item) {
+        openForm();
+        startEdit(item);
+      }
     } else if (action === "delete") {
       const item = items.find((i) => i.id === id);
       if (item) void removeItem(item);

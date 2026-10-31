@@ -10,9 +10,13 @@
 
   <body>
     <main class="container">
-      <h1>Stock manager</h1>
+      <header class="toolbar">
+        <h1>Stock Manager</h1>
+        <span id="item-count" class="count" hidden></span>
+        <button type="button" id="add-btn">Add Item</button>
+      </header>
 
-      <form id="item-form">
+      <form id="item-form" hidden>
         <h2 id="form-title">Add item</h2>
         <div class="row">
           <label for="name">Name</label>
@@ -43,19 +47,21 @@
 
       <p id="error" class="error" hidden></p>
 
-      <table id="items">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Quantity</th>
-            <th>Stock alarm</th>
-            <th>Notes</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="items-body"></tbody>
-      </table>
-      <p id="empty" hidden>No items yet — add your first one above.</p>
+      <div class="content">
+        <table id="items">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Quantity</th>
+              <th>Stock alarm</th>
+              <th>Notes</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="items-body"></tbody>
+        </table>
+        <p id="empty" hidden>No items yet — click “Add Item” to create your first one.</p>
+      </div>
     </main>
   </body>
 </html>
