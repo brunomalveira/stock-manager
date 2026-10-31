@@ -6,10 +6,10 @@ close — current status only, no history chain.
 ## Current status
 
 - **Updated:** 2026-10-31
-- **Phase:** CSV export/import — implemented on `feat/csv-import-export`
-- **Branch:** `feat/csv-import-export` → merging to `main` via PR
+- **Phase:** complete — CRUD, consumption alarm, notifications, macOS UI, background running, launch at login, CSV export/import (all merged to `main`)
+- **Branch:** `main`
 - **Remote:** `git@github.com:brunomalveira/stock-manager.git` (private, GitHub)
-- **In progress:** user verification of the CSV flows
+- **In progress:** nothing — no approved implementation steps pending
 - **Blockers:** none
 - **Commit authorization:** granted for feature/fix commits on feature branches
-- **Next step:** merge this PR; out-of-scope list needs an explicit ask (movements, categories, raw-DB backup); the stock database is per-machine — CSV export/import is the way to move stock lists between machines
+- **Next step:** nothing pending; open items are decisions/housekeeping — build the macOS bundle on the Mac, flip the repo to private once SSH is on the Mac, and out-of-scope features need an explicit ask (see AGENTS.md)
