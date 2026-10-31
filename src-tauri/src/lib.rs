@@ -17,14 +17,14 @@ pub fn run() {
                             version: 1,
                             description: "create_items",
                             sql: "CREATE TABLE items (
-                                id         INTEGER PRIMARY KEY AUTOINCREMENT,
-                                name       TEXT NOT NULL,
-                                quantity   REAL NOT NULL DEFAULT 0 CHECK (quantity >= 0),
-                                unit       TEXT NOT NULL DEFAULT 'unit',
-                                notes      TEXT NOT NULL DEFAULT '',
-                                created_at TEXT NOT NULL,
-                                updated_at TEXT NOT NULL
-                            );",
+                            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                            name       TEXT NOT NULL,
+                            quantity   REAL NOT NULL DEFAULT 0 CHECK (quantity >= 0),
+                            unit       TEXT NOT NULL DEFAULT 'unit',
+                            notes      TEXT NOT NULL DEFAULT '',
+                            created_at TEXT NOT NULL,
+                            updated_at TEXT NOT NULL
+                        );",
                             kind: MigrationKind::Up,
                         },
                         Migration {

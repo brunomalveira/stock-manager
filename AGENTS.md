@@ -88,7 +88,7 @@ CREATE TABLE items (
 - `quantity` is REAL because units like kg allow decimals; display trims trailing zeros (`2` not `2.0`).
 - Alarm projection: `remaining ≈ quantity − consumed_per_day × days_since(last_stocked_at)`; days-to-zero = `remaining / consumed_per_day`; alert when days-to-zero ≤ `alert_threshold_days`.
 - Migrations so far: 1 creates the table; 2–4 add the alarm columns; 5 backfills `last_stocked_at` from `created_at`.
-- Only new migrations may be added; existing ones are immutable.
+- Only new migrations may be added; existing ones are immutable. sqlx checksums each migration's SQL text — **even re-indenting an applied migration breaks every `Database.load()`** ("migration was previously applied but has been modified"). Never touch an applied migration's string; add a new migration instead.
 
 ## Scope
 
