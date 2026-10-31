@@ -6,10 +6,10 @@ close — current status only, no history chain.
 ## Current status
 
 - **Updated:** 2026-10-31
-- **Phase:** v1 complete — items CRUD + stock consumption alarm (user-verified in dev)
-- **Branch:** `feat/stock-alarm` → merging to `main` via PR
+- **Phase:** native notification alarms (in-app) — implemented, tests green
+- **Branch:** `feat/notifications` → merging to `main` via PR
 - **Remote:** `git@github.com:brunomalveira/stock-manager.git` (private, GitHub)
-- **In progress:** nothing
+- **In progress:** user verification of the notification flow
 - **Blockers:** none
 - **Commit authorization:** granted for feature/fix commits on feature branches
-- **Next step:** merge `feat/stock-alarm` → `main` via PR, then `npm run tauri build` for installers when wanted
+- **Next step:** merge PR, then the launchd background agent (phase 2, approved) when asked; `npm run tauri build` for installers when wanted
