@@ -5,18 +5,21 @@ use tauri_plugin_sql::{Migration, MigrationKind};
 /// the identifier, it orphans the user's data).
 const DB_URL: &str = "sqlite:stockmanager.db";
 
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub fn run() {
-    tauri::Builder::default()
-        .plugin(
-            tauri_plugin_sql::Builder::default()
-                .add_migrations(
-                    DB_URL,
-                    vec![
-                        Migration {
-                            version: 1,
-                            description: "create_items",
-                            sql: "CREATE TABLE items (
+/// The single source of truth for the schema. Applied migrations are
+/// immutable — sqlx checksums their SQL text, so even re-indenting a
+/// string breaks `Database.load()` (see AGENTS.md). Always add new
+/// migrations; never touch applied ones.
+///
+/// `#[rustfmt::skip]` guards the multi-line SQL strings from reformats.
+/// `src-tauri/tests/sql_integration.rs` applies this list against
+/// in-memory SQLite to test the real schema.
+#[rustfmt::skip]
+pub fn migrations() -> Vec<Migration> {
+    vec![
+        Migration {
+            version: 1,
+            description: "create_items",
+            sql: "CREATE TABLE items (
                             id         INTEGER PRIMARY KEY AUTOINCREMENT,
                             name       TEXT NOT NULL,
                             quantity   REAL NOT NULL DEFAULT 0 CHECK (quantity >= 0),
@@ -25,34 +28,41 @@ pub fn run() {
                             created_at TEXT NOT NULL,
                             updated_at TEXT NOT NULL
                         );",
-                            kind: MigrationKind::Up,
-                        },
-                        Migration {
-                            version: 2,
-                            description: "add_consumed_per_day",
-                            sql: "ALTER TABLE items ADD COLUMN consumed_per_day REAL;",
-                            kind: MigrationKind::Up,
-                        },
-                        Migration {
-                            version: 3,
-                            description: "add_alert_threshold_days",
-                            sql: "ALTER TABLE items ADD COLUMN alert_threshold_days REAL;",
-                            kind: MigrationKind::Up,
-                        },
-                        Migration {
-                            version: 4,
-                            description: "add_last_stocked_at",
-                            sql: "ALTER TABLE items ADD COLUMN last_stocked_at TEXT;",
-                            kind: MigrationKind::Up,
-                        },
-                        Migration {
-                            version: 5,
-                            description: "backfill_last_stocked_at",
-                            sql: "UPDATE items SET last_stocked_at = created_at WHERE last_stocked_at IS NULL;",
-                            kind: MigrationKind::Up,
-                        },
-                    ],
-                )
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 2,
+            description: "add_consumed_per_day",
+            sql: "ALTER TABLE items ADD COLUMN consumed_per_day REAL;",
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 3,
+            description: "add_alert_threshold_days",
+            sql: "ALTER TABLE items ADD COLUMN alert_threshold_days REAL;",
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 4,
+            description: "add_last_stocked_at",
+            sql: "ALTER TABLE items ADD COLUMN last_stocked_at TEXT;",
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 5,
+            description: "backfill_last_stocked_at",
+            sql: "UPDATE items SET last_stocked_at = created_at WHERE last_stocked_at IS NULL;",
+            kind: MigrationKind::Up,
+        },
+    ]
+}
+
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    tauri::Builder::default()
+        .plugin(
+            tauri_plugin_sql::Builder::default()
+                .add_migrations(DB_URL, migrations())
                 .build(),
         )
         .run(tauri::generate_context!())
