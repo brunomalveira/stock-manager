@@ -52,6 +52,23 @@ Notes:
 - The database is per-machine (stored in the OS app-data directory) — it
   starts empty on a new machine.
 
+## Updating the macOS app
+
+There is no auto-updater (the app is local-only by design) — updates are manual:
+
+```bash
+git pull
+npm install        # only needed if package.json / package-lock.json changed
+npm run tauri build
+```
+
+Then replace the app in `/Applications` with the fresh
+`src-tauri/target/release/bundle/macos/Stock Manager.app`.
+
+Your data survives updates: the SQLite database lives in the OS app-data
+directory (`~/Library/Application Support/com.brunomalveira.stockmanager/`)
+and schema migrations apply automatically at first launch of the new version.
+
 See `AGENTS.md` for ground rules, the data model, scope, and the definition
 of done. Current status lives in `docs/project/STATE.md`. Test layers and
 rules live in `docs/harness/TESTING.md`.
