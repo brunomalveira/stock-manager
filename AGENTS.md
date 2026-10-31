@@ -124,12 +124,18 @@ CREATE TABLE items (
 - Background running: closing the window hides it — the app keeps running and
   the alarm timer keeps firing; a tray icon (Open / Quit) and the Dock click
   reopen it. The launchd agent (phase 2b) adds restart-survival later.
+- CSV export/import: portable columns (name, quantity, unit, notes,
+  consumed_per_day, alert_threshold_days); import merges by name (existing
+  items update their user-meaningful fields, new items are added, nothing is
+  deleted) with a confirm showing counts; native save/open dialogs; File
+  menu + settings-sheet buttons. Pure logic in `src/csv.ts` (tested).
 
 **Out of scope (do not build without asking):**
 - Stock movements / in-out history log
 - Remote alert channels (email/WhatsApp) — decided against; alerts stay local
 - Categories, tags, filtering beyond basic search
-- CSV export, backup/restore
+- Backup-restore of the raw database file (CSV export/import covers moving
+  stock lists between machines)
 - Multi-user anything, network anything
 
 ## Conventions

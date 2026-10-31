@@ -1,9 +1,11 @@
 import Database from "@tauri-apps/plugin-sql";
+import { open, save } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { isPermissionGranted, requestPermission, sendNotification } from "@tauri-apps/plugin-notification";
 import { alertBody, shouldAlert } from "./alerts";
+import { parseCsv, toCsv, type CsvItem } from "./csv";
 import {
   daysSinceStock,
   fmtDays,
@@ -51,6 +53,7 @@ const alertInput = document.querySelector("#alert-days") as HTMLInputElement;
 const submitBtn = document.querySelector("#submit-btn") as HTMLButtonElement;
 const cancelBtn = document.querySelector("#cancel-btn") as HTMLButtonElement;
 const errorEl = document.querySelector("#error") as HTMLElement;
+const statusEl = document.querySelector("#status") as HTMLElement;
 const itemsTable = document.querySelector("#items") as HTMLTableElement;
 const tbody = document.querySelector("#items-body") as HTMLTableSectionElement;
 const emptyEl = document.querySelector("#empty") as HTMLElement;
@@ -59,6 +62,8 @@ const itemCount = document.querySelector("#item-count") as HTMLElement;
 const settingsBtn = document.querySelector("#settings-btn") as HTMLButtonElement;
 const settingsSheet = document.querySelector("#settings-sheet") as HTMLElement;
 const launchAtLogin = document.querySelector("#launch-at-login") as HTMLInputElement;
+const exportCsvBtn = document.querySelector("#export-csv-btn") as HTMLButtonElement;
+const importCsvBtn = document.querySelector("#import-csv-btn") as HTMLButtonElement;
 
 function showError(message: string): void {
   errorEl.textContent = message;
@@ -68,6 +73,15 @@ function showError(message: string): void {
 
 function clearError(): void {
   errorEl.hidden = true;
+}
+
+function showStatus(message: string): void {
+  statusEl.textContent = message;
+  statusEl.hidden = false;
+}
+
+function clearStatus(): void {
+  statusEl.hidden = true;
 }
 
 function resetForm(): void {
@@ -269,6 +283,101 @@ async function handleSubmit(event: Event): Promise<void> {
   }
 }
 
+/** The portable CSV shape: user-meaningful fields only. */
+function toPortable(item: Item): CsvItem {
+  return {
+    name: item.name,
+    quantity: item.quantity,
+    unit: item.unit,
+    notes: item.notes,
+    consumed_per_day: item.consumed_per_day,
+    alert_threshold_days: item.alert_threshold_days,
+  };
+}
+
+/** Export CSV: save dialog → toCsv → write via the Rust command. */
+async function exportCsv(): Promise<void> {
+  clearError();
+  clearStatus();
+  const path = await save({
+    defaultPath: "stock-manager.csv",
+    filters: [{ name: "CSV", extensions: ["csv"] }],
+  });
+  if (path === null) return;
+  try {
+    const csv = toCsv(items.map(toPortable));
+    await invoke("write_text_file", { path, contents: csv });
+    showStatus(`Exported ${items.length} item${items.length === 1 ? "" : "s"} to ${path}.`);
+  } catch (e) {
+    showError(`Export failed: ${e instanceof Error ? e.message : String(e)}`);
+  }
+}
+
+/**
+ * Import CSV: open dialog → read → parse → merge by name.
+ * Existing items update their user-meaningful fields only (the projection and
+ * anti-spam state are preserved, so a re-import is idempotent); new items are
+ * stocked now with fresh timestamps.
+ */
+async function importCsv(): Promise<void> {
+  clearError();
+  clearStatus();
+  const path = await open({
+    multiple: false,
+    filters: [{ name: "CSV", extensions: ["csv"] }],
+  });
+  if (path === null) return;
+  let text: string;
+  try {
+    text = await invoke<string>("read_text_file", { path });
+  } catch (e) {
+    showError(`Import failed: ${e instanceof Error ? e.message : String(e)}`);
+    return;
+  }
+  const { items: rows, errors } = parseCsv(text);
+  if (rows.length === 0) {
+    if (errors.length > 0) showError(errors.join(" "));
+    else showStatus("Nothing to import — the file has no items.");
+    return;
+  }
+  const existing = new Map(items.map((i) => [i.name.toLowerCase(), i]));
+  let add = 0;
+  let update = 0;
+  for (const row of rows) {
+    if (existing.has(row.name.toLowerCase())) update++;
+    else add++;
+  }
+  const confirmed = confirm(
+    `Import ${add} new item${add === 1 ? "" : "s"} and update ${update} existing? Existing names are updated in place — nothing is deleted.`,
+  );
+  if (!confirmed) return;
+  const now = new Date().toISOString();
+  try {
+    for (const row of rows) {
+      const prev = existing.get(row.name.toLowerCase());
+      if (prev) {
+        await db.execute(
+          "UPDATE items SET quantity = $1, unit = $2, notes = $3, consumed_per_day = $4, alert_threshold_days = $5, updated_at = $6 WHERE id = $7",
+          [row.quantity, row.unit, row.notes, row.consumed_per_day, row.alert_threshold_days, now, prev.id],
+        );
+      } else {
+        await db.execute(
+          "INSERT INTO items (name, quantity, unit, notes, consumed_per_day, alert_threshold_days, created_at, updated_at, last_stocked_at, last_alerted_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $7, $7, $8)",
+          [row.name, row.quantity, row.unit, row.notes, row.consumed_per_day, row.alert_threshold_days, now, null],
+        );
+      }
+    }
+    await refresh();
+    if (errors.length > 0) {
+      showError(`Imported: ${add} added, ${update} updated. Skipped rows: ${errors.join(" ")}`);
+    } else {
+      showStatus(`Imported: ${add} added, ${update} updated.`);
+    }
+  } catch (e) {
+    showError(`Import failed: ${e instanceof Error ? e.message : String(e)}`);
+  }
+}
+
 async function ensurePermission(): Promise<void> {
   try {
     if (await isPermissionGranted()) {
@@ -337,6 +446,12 @@ window.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
+  // CSV export/import: settings sheet buttons and the File menu.
+  exportCsvBtn.addEventListener("click", () => void exportCsv());
+  importCsvBtn.addEventListener("click", () => void importCsv());
+  await listen("menu://export-csv", () => void exportCsv());
+  await listen("menu://import-csv", () => void importCsv());
+
   // Native app menu: Add Item (⌘N).
   await listen("menu://add-item", () => openForm());
   // Native context menu on rows (right-click): Edit / Delete.
@@ -386,7 +501,8 @@ window.addEventListener("DOMContentLoaded", async () => {
   await refresh();
   // Keep "days since" and the projection fresh while the app sits open.
   setInterval(() => render(), 60_000);
-  // Autonomy phase 1: alarm checks while the app runs (phase 2 adds a launchd agent).
+  // Autonomy phase 1: alarm checks while the app runs (launch-at-login adds
+  // restart-survival: the OS relaunches the app at every login).
   await checkAlarms();
   setInterval(() => void checkAlarms(), 5 * 60_000);
 });

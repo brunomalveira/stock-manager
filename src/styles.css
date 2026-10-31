@@ -229,6 +229,11 @@ button:hover {
   margin: 0 0 12px;
 }
 
+.status {
+  color: var(--accent);
+  margin: 0 0 12px;
+}
+
 /* Content layer: solid surface, never glass (Liquid Glass rule). */
 .content {
   background: var(--surface);

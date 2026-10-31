@@ -6,10 +6,10 @@ close — current status only, no history chain.
 ## Current status
 
 - **Updated:** 2026-10-31
-- **Phase:** complete — CRUD, consumption alarm, notifications, macOS UI, background running, launch at login (all merged to `main`)
-- **Branch:** `main`
+- **Phase:** CSV export/import — implemented on `feat/csv-import-export`
+- **Branch:** `feat/csv-import-export` → merging to `main` via PR
 - **Remote:** `git@github.com:brunomalveira/stock-manager.git` (private, GitHub)
-- **In progress:** nothing
+- **In progress:** user verification of the CSV flows
 - **Blockers:** none
 - **Commit authorization:** granted for feature/fix commits on feature branches
-- **Next step:** build the macOS bundle on the Mac (`npm run tauri build`); the stock database is per-machine — items entered here do not appear on the Mac; pending UI features: none (out-of-scope list in AGENTS.md needs an explicit ask)
+- **Next step:** merge this PR; out-of-scope list needs an explicit ask (movements, categories, raw-DB backup); the stock database is per-machine — CSV export/import is the way to move stock lists between machines
