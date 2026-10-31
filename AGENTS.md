@@ -66,36 +66,44 @@ Toolchain prerequisites: Node.js ≥ 20, Rust (stable), Tauri CLI v2 (devDepende
 - **macOS:** Xcode Command Line Tools.
 - Tauri does not cross-compile bundles: build on the target OS.
 
-## Data model (v1)
+## Data model
 
 Single `items` table, created via a `migrations` list passed to `tauri-plugin-sql`:
 
 ```sql
 CREATE TABLE items (
-  id         INTEGER PRIMARY KEY AUTOINCREMENT,
-  name       TEXT NOT NULL,
-  quantity   REAL NOT NULL DEFAULT 0 CHECK (quantity >= 0),
-  unit       TEXT NOT NULL DEFAULT 'unit',  -- 'unit', 'kg', 'l', 'box', ...
-  notes      TEXT NOT NULL DEFAULT '',
-  created_at TEXT NOT NULL,                 -- ISO 8601
-  updated_at TEXT NOT NULL                  -- ISO 8601
+  id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+  name                 TEXT NOT NULL,
+  quantity             REAL NOT NULL DEFAULT 0 CHECK (quantity >= 0),
+  unit                 TEXT NOT NULL DEFAULT 'unit',  -- 'unit', 'kg', 'l', 'box', ...
+  notes                TEXT NOT NULL DEFAULT '',
+  consumed_per_day     REAL,          -- optional; NULL = no projection for this item
+  alert_threshold_days REAL,          -- optional; NULL = no alarm for this item
+  last_stocked_at      TEXT,          -- set on every quantity change (stock event)
+  created_at           TEXT NOT NULL, -- ISO 8601
+  updated_at           TEXT NOT NULL  -- ISO 8601
 );
 ```
 
 - `quantity` is REAL because units like kg allow decimals; display trims trailing zeros (`2` not `2.0`).
-- Only new migrations may be added; existing ones are immutable.
+- Alarm projection: `remaining ≈ quantity − consumed_per_day × days_since(last_stocked_at)`; days-to-zero = `remaining / consumed_per_day`; alert when days-to-zero ≤ `alert_threshold_days`.
+- Migrations so far: 1 creates the table; 2–4 add the alarm columns; 5 backfills `last_stocked_at` from `created_at`.
+- Only new migrations may be added; existing ones are immutable. sqlx checksums each migration's SQL text — **even re-indenting an applied migration breaks every `Database.load()`** ("migration was previously applied but has been modified"). Never touch an applied migration's string; add a new migration instead.
 
 ## Scope
 
-**v1 (MVP) — items CRUD only:**
+**v1 — items CRUD + stock consumption alarm:**
 - One screen: list of items (name, quantity + unit), sorted by name.
 - Add an item (name, quantity, unit, notes).
-- Edit any field; quick quantity adjust (+/-) is welcome if trivial.
+- Edit any field; quick quantity adjust (+/-).
 - Delete an item — with a confirmation step.
+- Consumption projection & alarm (optional per item): consumed-per-day +
+  alert-threshold fields; projection of remaining stock since
+  `last_stocked_at`; row-level warning when days-to-zero ≤ threshold.
 
-**Out of scope for v1 (do not build without asking):**
+**Out of scope (do not build without asking):**
 - Stock movements / in-out history log
-- Low-stock thresholds and alerts
+- System notifications (the alarm is visual-only for now)
 - Categories, tags, filtering beyond basic search
 - CSV export, backup/restore
 - Multi-user anything, network anything

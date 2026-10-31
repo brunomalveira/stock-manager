@@ -28,6 +28,13 @@
           <label for="notes">Notes</label>
           <input id="notes" name="notes" placeholder="Optional notes" />
         </div>
+        <div class="row">
+          <label for="consumed-per-day">Consumed/day</label>
+          <input id="consumed-per-day" name="consumed-per-day" type="number" min="0" step="any" placeholder="optional" />
+
+          <label for="alert-days">Alert before empty (days)</label>
+          <input id="alert-days" name="alert-days" type="number" min="0" step="any" placeholder="optional" />
+        </div>
         <div class="row actions">
           <button type="submit" id="submit-btn">Add item</button>
           <button type="button" id="cancel-btn" hidden>Cancel</button>
@@ -41,6 +48,7 @@
           <tr>
             <th>Name</th>
             <th>Quantity</th>
+            <th>Stock alarm</th>
             <th>Notes</th>
             <th>Actions</th>
           </tr>

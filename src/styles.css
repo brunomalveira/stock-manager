@@ -14,7 +14,7 @@ body {
 }
 
 .container {
-  max-width: 880px;
+  max-width: 920px;
   margin: 0 auto;
   padding: 24px 16px 48px;
 }
@@ -75,6 +75,11 @@ select {
   width: 90px;
 }
 
+#consumed-per-day,
+#alert-days {
+  width: 110px;
+}
+
 button {
   padding: 6px 12px;
   border: 1px solid rgba(128, 128, 128, 0.45);
@@ -117,8 +122,14 @@ th {
 
 td.notes {
   color: rgba(128, 128, 128, 1);
-  max-width: 240px;
+  max-width: 200px;
   overflow-wrap: anywhere;
+}
+
+.qty-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .qty-btn {
@@ -131,6 +142,30 @@ td.notes {
   min-width: 72px;
   text-align: center;
   font-variant-numeric: tabular-nums;
+}
+
+.secondary {
+  display: block;
+  font-size: 11px;
+  color: rgba(128, 128, 128, 1);
+  margin-top: 2px;
+}
+
+.alarm {
+  white-space: nowrap;
+}
+
+.alarm.muted {
+  color: rgba(128, 128, 128, 1);
+}
+
+.alarm.warn {
+  color: #d64545;
+  font-weight: 600;
+}
+
+tr.warn-row td {
+  background: rgba(214, 69, 69, 0.08);
 }
 
 td button + button {
