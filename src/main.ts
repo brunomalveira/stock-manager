@@ -1,4 +1,11 @@
 import Database from "@tauri-apps/plugin-sql";
+import {
+  daysSinceStock,
+  fmtDays,
+  fmtQuantity,
+  isAlerting,
+  projection,
+} from "./projection";
 
 interface Item {
   id: number;
@@ -13,15 +20,8 @@ interface Item {
   updated_at: string;
 }
 
-interface Projection {
-  daysSince: number;
-  remaining: number;
-  daysToZero: number;
-}
-
 const UNITS = ["unit", "kg", "g", "l", "ml", "box", "pack"];
 const DB_URL = "sqlite:stockmanager.db";
-const DAY_MS = 86_400_000;
 
 let db: Database;
 let items: Item[] = [];
@@ -41,16 +41,6 @@ const errorEl = document.querySelector("#error") as HTMLElement;
 const itemsTable = document.querySelector("#items") as HTMLTableElement;
 const tbody = document.querySelector("#items-body") as HTMLTableSectionElement;
 const emptyEl = document.querySelector("#empty") as HTMLElement;
-
-/** 2 -> "2", 2.5 -> "2.5" (trims trailing zeros; quantity is REAL for kg-style units). */
-function fmtQuantity(q: number): string {
-  return String(Number(q.toFixed(3)));
-}
-
-/** 3.25 days -> "3.3" (one decimal is enough for day-scale figures). */
-function fmtDays(d: number): string {
-  return String(Number(d.toFixed(1)));
-}
 
 function showError(message: string): void {
   errorEl.textContent = message;
@@ -82,28 +72,6 @@ function startEdit(item: Item): void {
   submitBtn.textContent = "Save changes";
   cancelBtn.hidden = false;
   nameInput.focus();
-}
-
-/** Days elapsed since the current stock amount was set (stock event). */
-function daysSinceStock(item: Item): number {
-  const baseline = item.last_stocked_at ?? item.created_at;
-  return Math.max(0, (Date.now() - Date.parse(baseline)) / DAY_MS);
-}
-
-/**
- * Consumption projection: remaining ≈ quantity − rate × days since the
- * stock event. NULL consumed_per_day (or rate ≤ 0) = no projection.
- */
-function projection(item: Item): Projection | null {
-  const rate = item.consumed_per_day ?? 0;
-  if (rate <= 0) return null;
-  const daysSince = daysSinceStock(item);
-  const remaining = item.quantity - rate * daysSince;
-  return { daysSince, remaining, daysToZero: remaining / rate };
-}
-
-function isAlerting(item: Item, p: Projection): boolean {
-  return item.alert_threshold_days !== null && p.daysToZero <= item.alert_threshold_days;
 }
 
 async function refresh(): Promise<void> {
