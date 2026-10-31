@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="/src/styles.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Stock Manager</title>
+    <script type="module" src="/src/main.ts" defer></script>
+  </head>
+
+  <body>
+    <main class="container">
+      <h1>Stock manager</h1>
+
+      <form id="item-form">
+        <h2 id="form-title">Add item</h2>
+        <div class="row">
+          <label for="name">Name</label>
+          <input id="name" name="name" placeholder="Item name" required />
+
+          <label for="quantity">Quantity</label>
+          <input id="quantity" name="quantity" type="number" min="0" step="any" value="0" required />
+
+          <label for="unit">Unit</label>
+          <select id="unit" name="unit"></select>
+        </div>
+        <div class="row">
+          <label for="notes">Notes</label>
+          <input id="notes" name="notes" placeholder="Optional notes" />
+        </div>
+        <div class="row actions">
+          <button type="submit" id="submit-btn">Add item</button>
+          <button type="button" id="cancel-btn" hidden>Cancel</button>
+        </div>
+      </form>
+
+      <p id="error" class="error" hidden></p>
+
+      <table id="items">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Quantity</th>
+            <th>Notes</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="items-body"></tbody>
+      </table>
+      <p id="empty" hidden>No items yet — add your first one above.</p>
+    </main>
+  </body>
+</html>
