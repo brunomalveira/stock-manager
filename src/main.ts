@@ -6,12 +6,22 @@ interface Item {
   quantity: number;
   unit: string;
   notes: string;
+  consumed_per_day: number | null;
+  alert_threshold_days: number | null;
+  last_stocked_at: string | null;
   created_at: string;
   updated_at: string;
 }
 
+interface Projection {
+  daysSince: number;
+  remaining: number;
+  daysToZero: number;
+}
+
 const UNITS = ["unit", "kg", "g", "l", "ml", "box", "pack"];
 const DB_URL = "sqlite:stockmanager.db";
+const DAY_MS = 86_400_000;
 
 let db: Database;
 let items: Item[] = [];
@@ -23,6 +33,8 @@ const nameInput = document.querySelector("#name") as HTMLInputElement;
 const quantityInput = document.querySelector("#quantity") as HTMLInputElement;
 const unitSelect = document.querySelector("#unit") as HTMLSelectElement;
 const notesInput = document.querySelector("#notes") as HTMLInputElement;
+const consumedInput = document.querySelector("#consumed-per-day") as HTMLInputElement;
+const alertInput = document.querySelector("#alert-days") as HTMLInputElement;
 const submitBtn = document.querySelector("#submit-btn") as HTMLButtonElement;
 const cancelBtn = document.querySelector("#cancel-btn") as HTMLButtonElement;
 const errorEl = document.querySelector("#error") as HTMLElement;
@@ -33,6 +45,11 @@ const emptyEl = document.querySelector("#empty") as HTMLElement;
 /** 2 -> "2", 2.5 -> "2.5" (trims trailing zeros; quantity is REAL for kg-style units). */
 function fmtQuantity(q: number): string {
   return String(Number(q.toFixed(3)));
+}
+
+/** 3.25 days -> "3.3" (one decimal is enough for day-scale figures). */
+function fmtDays(d: number): string {
+  return String(Number(d.toFixed(1)));
 }
 
 function showError(message: string): void {
@@ -59,10 +76,34 @@ function startEdit(item: Item): void {
   quantityInput.value = String(item.quantity);
   unitSelect.value = UNITS.includes(item.unit) ? item.unit : "unit";
   notesInput.value = item.notes;
+  consumedInput.value = item.consumed_per_day === null ? "" : String(item.consumed_per_day);
+  alertInput.value = item.alert_threshold_days === null ? "" : String(item.alert_threshold_days);
   formTitle.textContent = "Edit item";
   submitBtn.textContent = "Save changes";
   cancelBtn.hidden = false;
   nameInput.focus();
+}
+
+/** Days elapsed since the current stock amount was set (stock event). */
+function daysSinceStock(item: Item): number {
+  const baseline = item.last_stocked_at ?? item.created_at;
+  return Math.max(0, (Date.now() - Date.parse(baseline)) / DAY_MS);
+}
+
+/**
+ * Consumption projection: remaining ≈ quantity − rate × days since the
+ * stock event. NULL consumed_per_day (or rate ≤ 0) = no projection.
+ */
+function projection(item: Item): Projection | null {
+  const rate = item.consumed_per_day ?? 0;
+  if (rate <= 0) return null;
+  const daysSince = daysSinceStock(item);
+  const remaining = item.quantity - rate * daysSince;
+  return { daysSince, remaining, daysToZero: remaining / rate };
+}
+
+function isAlerting(item: Item, p: Projection): boolean {
+  return item.alert_threshold_days !== null && p.daysToZero <= item.alert_threshold_days;
 }
 
 async function refresh(): Promise<void> {
@@ -78,11 +119,16 @@ function render(): void {
   tbody.replaceChildren();
   for (const item of items) {
     const tr = document.createElement("tr");
+    const p = projection(item);
+    const alerting = p !== null && isAlerting(item, p);
+    if (alerting) tr.className = "warn-row";
 
     const nameCell = document.createElement("td");
     nameCell.textContent = item.name;
 
     const qtyCell = document.createElement("td");
+    const qtyLine = document.createElement("div");
+    qtyLine.className = "qty-line";
     const minus = document.createElement("button");
     minus.type = "button";
     minus.textContent = "−";
@@ -102,7 +148,25 @@ function render(): void {
     plus.dataset.delta = "1";
     plus.dataset.id = String(item.id);
     plus.setAttribute("aria-label", `Increase ${item.name}`);
-    qtyCell.append(minus, qty, plus);
+    qtyLine.append(minus, qty, plus);
+    const stocked = document.createElement("span");
+    stocked.className = "secondary";
+    stocked.textContent = `stocked ${fmtDays(daysSinceStock(item))}d ago`;
+    qtyCell.append(qtyLine, stocked);
+
+    const alarmCell = document.createElement("td");
+    alarmCell.className = "alarm";
+    if (p === null) {
+      alarmCell.textContent = "—";
+      alarmCell.classList.add("muted");
+    } else if (p.remaining <= 0) {
+      alarmCell.textContent = "ran out";
+      if (alerting) alarmCell.classList.add("warn");
+    } else {
+      const text = `≈ ${fmtQuantity(p.remaining)} ${item.unit} left · ~${fmtDays(p.daysToZero)}d to empty`;
+      alarmCell.textContent = alerting ? `⚠ ${text}` : text;
+      if (alerting) alarmCell.classList.add("warn");
+    }
 
     const notesCell = document.createElement("td");
     notesCell.textContent = item.notes;
@@ -121,7 +185,7 @@ function render(): void {
     deleteBtn.dataset.id = String(item.id);
     actionsCell.append(editBtn, deleteBtn);
 
-    tr.append(nameCell, qtyCell, notesCell, actionsCell);
+    tr.append(nameCell, qtyCell, alarmCell, notesCell, actionsCell);
     tbody.append(tr);
   }
 }
@@ -131,9 +195,11 @@ async function adjustQuantity(id: number, delta: number): Promise<void> {
   if (!item) return;
   const next = Math.max(0, item.quantity + delta); // quantities can never go negative
   if (next === item.quantity) return;
+  const now = new Date().toISOString();
+  // Any quantity change is a stock event: the projection baseline resets.
   await db.execute(
-    "UPDATE items SET quantity = $1, updated_at = $2 WHERE id = $3",
-    [next, new Date().toISOString(), id],
+    "UPDATE items SET quantity = $1, updated_at = $2, last_stocked_at = $3 WHERE id = $4",
+    [next, now, now, id],
   );
   await refresh();
 }
@@ -155,6 +221,10 @@ async function handleSubmit(event: Event): Promise<void> {
   const quantity = Number(quantityInput.value);
   const unit = unitSelect.value;
   const notes = notesInput.value.trim();
+  const consumedRaw = consumedInput.value.trim();
+  const consumed = consumedRaw === "" ? null : Number(consumedRaw);
+  const alertRaw = alertInput.value.trim();
+  const alertDays = alertRaw === "" ? null : Number(alertRaw);
 
   if (!name) {
     showError("Name is required.");
@@ -164,18 +234,31 @@ async function handleSubmit(event: Event): Promise<void> {
     showError("Quantity must be a number greater than or equal to 0.");
     return;
   }
+  if (consumed !== null && (!Number.isFinite(consumed) || consumed < 0)) {
+    showError("Consumed per day must be a number greater than or equal to 0.");
+    return;
+  }
+  if (alertDays !== null && (!Number.isFinite(alertDays) || alertDays < 0)) {
+    showError("Alert days must be a number greater than or equal to 0.");
+    return;
+  }
 
   const now = new Date().toISOString();
   try {
     if (editingId === null) {
       await db.execute(
-        "INSERT INTO items (name, quantity, unit, notes, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $5)",
-        [name, quantity, unit, notes, now],
+        "INSERT INTO items (name, quantity, unit, notes, consumed_per_day, alert_threshold_days, created_at, updated_at, last_stocked_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $7, $7)",
+        [name, quantity, unit, notes, consumed, alertDays, now],
       );
     } else {
+      const previous = items.find((i) => i.id === editingId) ?? null;
+      const quantityChanged = previous !== null && previous.quantity !== quantity;
+      const lastStocked = quantityChanged
+        ? now
+        : (previous?.last_stocked_at ?? previous?.created_at ?? now);
       await db.execute(
-        "UPDATE items SET name = $1, quantity = $2, unit = $3, notes = $4, updated_at = $5 WHERE id = $6",
-        [name, quantity, unit, notes, now, editingId],
+        "UPDATE items SET name = $1, quantity = $2, unit = $3, notes = $4, consumed_per_day = $5, alert_threshold_days = $6, updated_at = $7, last_stocked_at = $8 WHERE id = $9",
+        [name, quantity, unit, notes, consumed, alertDays, now, lastStocked, editingId],
       );
       resetForm();
     }
@@ -221,4 +304,6 @@ window.addEventListener("DOMContentLoaded", async () => {
   });
 
   await refresh();
+  // Keep "days since" and the projection fresh while the app sits open.
+  setInterval(() => render(), 60_000);
 });
