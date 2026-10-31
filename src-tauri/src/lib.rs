@@ -54,12 +54,19 @@ pub fn migrations() -> Vec<Migration> {
             sql: "UPDATE items SET last_stocked_at = created_at WHERE last_stocked_at IS NULL;",
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 6,
+            description: "add_last_alerted_at",
+            sql: "ALTER TABLE items ADD COLUMN last_alerted_at TEXT;",
+            kind: MigrationKind::Up,
+        },
     ]
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_notification::init())
         .plugin(
             tauri_plugin_sql::Builder::default()
                 .add_migrations(DB_URL, migrations())

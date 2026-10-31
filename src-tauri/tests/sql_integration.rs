@@ -45,6 +45,7 @@ async fn migrations_create_the_expected_schema() {
         "consumed_per_day".to_string(),
         "alert_threshold_days".to_string(),
         "last_stocked_at".to_string(),
+        "last_alerted_at".to_string(),
         "created_at".to_string(),
         "updated_at".to_string(),
     ];

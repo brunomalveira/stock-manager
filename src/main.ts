@@ -1,4 +1,6 @@
 import Database from "@tauri-apps/plugin-sql";
+import { isPermissionGranted, requestPermission, sendNotification } from "@tauri-apps/plugin-notification";
+import { alertBody, shouldAlert } from "./alerts";
 import {
   daysSinceStock,
   fmtDays,
@@ -22,6 +24,7 @@ interface Item {
   consumed_per_day: number | null;
   alert_threshold_days: number | null;
   last_stocked_at: string | null;
+  last_alerted_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -32,6 +35,7 @@ const DB_URL = "sqlite:stockmanager.db";
 let db: Database;
 let items: Item[] = [];
 let editingId: number | null = null;
+let notificationsAllowed = false;
 
 const form = document.querySelector("#item-form") as HTMLFormElement;
 const formTitle = document.querySelector("#form-title") as HTMLElement;
@@ -236,8 +240,8 @@ async function handleSubmit(event: Event): Promise<void> {
   try {
     if (editingId === null) {
       await db.execute(
-        "INSERT INTO items (name, quantity, unit, notes, consumed_per_day, alert_threshold_days, created_at, updated_at, last_stocked_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $7, $7)",
-        [name, quantity, unit, notes, consumed, alertDays, now],
+        "INSERT INTO items (name, quantity, unit, notes, consumed_per_day, alert_threshold_days, created_at, updated_at, last_stocked_at, last_alerted_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $7, $7, $8)",
+        [name, quantity, unit, notes, consumed, alertDays, now, null],
       );
     } else {
       const previous = items.find((i) => i.id === editingId) ?? null;
@@ -245,15 +249,48 @@ async function handleSubmit(event: Event): Promise<void> {
       const lastStocked = quantityChanged
         ? now
         : (previous?.last_stocked_at ?? previous?.created_at ?? now);
+      const lastAlerted = quantityChanged ? null : (previous?.last_alerted_at ?? null);
       await db.execute(
-        "UPDATE items SET name = $1, quantity = $2, unit = $3, notes = $4, consumed_per_day = $5, alert_threshold_days = $6, updated_at = $7, last_stocked_at = $8 WHERE id = $9",
-        [name, quantity, unit, notes, consumed, alertDays, now, lastStocked, editingId],
+        "UPDATE items SET name = $1, quantity = $2, unit = $3, notes = $4, consumed_per_day = $5, alert_threshold_days = $6, updated_at = $7, last_stocked_at = $8, last_alerted_at = $9 WHERE id = $10",
+        [name, quantity, unit, notes, consumed, alertDays, now, lastStocked, lastAlerted, editingId],
       );
     }
     await refresh();
     closeForm();
   } catch (e) {
     showError(`Database error: ${e instanceof Error ? e.message : String(e)}`);
+  }
+}
+
+async function ensurePermission(): Promise<void> {
+  try {
+    if (await isPermissionGranted()) {
+      notificationsAllowed = true;
+      return;
+    }
+    notificationsAllowed = (await requestPermission()) === "granted";
+  } catch (e) {
+    console.error(`Notification permission failed: ${e instanceof Error ? e.message : String(e)}`);
+  }
+}
+
+/** Fires the alarm notifications for items under threshold — at most once per item per day. */
+async function checkAlarms(): Promise<void> {
+  if (!notificationsAllowed) return;
+  const now = Date.now();
+  for (const item of items) {
+    if (!shouldAlert(item, now)) continue;
+    try {
+      await sendNotification({ title: "Stock manager", body: alertBody(item, now) });
+      const nowIso = new Date().toISOString();
+      await db.execute(
+        "UPDATE items SET last_alerted_at = $1 WHERE id = $2",
+        [nowIso, item.id],
+      );
+      item.last_alerted_at = nowIso; // keep local state in sync with the DB
+    } catch (e) {
+      console.error(`Notification failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
   }
 }
 
@@ -296,7 +333,11 @@ window.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
+  await ensurePermission();
   await refresh();
   // Keep "days since" and the projection fresh while the app sits open.
   setInterval(() => render(), 60_000);
+  // Autonomy phase 1: alarm checks while the app runs (phase 2 adds a launchd agent).
+  await checkAlarms();
+  setInterval(() => void checkAlarms(), 5 * 60_000);
 });
