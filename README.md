@@ -31,8 +31,6 @@ brew install node                                                    # Node.js 2
 **Build:**
 
 ```bash
-git clone git@github.com:brunomalveira/stock-manager.git    # SSH — needs your key on this machine
-# or, while the repo is public (no auth needed):
 git clone https://github.com/brunomalveira/stock-manager.git
 cd stock-manager
 npm install
