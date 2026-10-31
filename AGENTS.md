@@ -26,6 +26,7 @@ Imported from the CSA workspace (`csa_ai_boundary_system`) and adapted for this 
 - `.agents/rules/` — binding rules: `harness-binding-rule.md`, `branch-rule.md`, `git-commit-rule.md`.
 - `.agents/skills/git-commit/` — atomic conventional commits (mandatory for any commit; see `.agents/rules/git-commit-rule.md`).
 - `.agents/skills/excalidraw-diagram-generator/` — planning/architecture diagrams as `.excalidraw` files under `docs/diagrams/`.
+- `.agents/skills/apple-design/` — Apple HIG design-review skill (123 HIG pages, Liquid Glass guide, Tauri translation) for UI design and review work.
 - `.codegraph/` — local CodeGraph index data (gitignored except `.gitignore`). Generate a fresh index here once the first code lands — never copy an index built for another codebase.
 
 Branch model: code work happens on `feat/<keyword>` branches from `main`; doc-only and chore commits may land directly on `main`.
@@ -104,6 +105,13 @@ CREATE TABLE items (
 - Consumption projection & alarm (optional per item): consumed-per-day +
   alert-threshold fields; projection of remaining stock since
   `last_stocked_at`; row-level warning when days-to-zero ≤ threshold.
+- macOS UI treatment: transparent window with sidebar vibrancy, overlay
+  title bar, glass toolbar with the add-item sheet.
+
+**Planned UI work (approved, not yet built):**
+- Semantic system colors + full dark-mode pass (WebKit `-apple-system-*` colors).
+- Native menu bar, standard keyboard shortcuts, row context menus.
+- DESIGN.md token spec (palette + typography as tokens).
 
 **Out of scope (do not build without asking):**
 - Stock movements / in-out history log
