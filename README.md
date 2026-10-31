@@ -8,13 +8,19 @@ Single user, offline, no server — all data lives in a local SQLite database.
 ## Development
 
 ```bash
-npm install
+npm run setup         # check the toolchain, install deps, fix npm bugs (or: npm install)
 npm run tauri dev     # run the app with hot reload
 npm run tauri build   # bundle installers for the current OS
 npm run build         # typecheck + build the frontend only
 npm test              # frontend unit tests (Vitest)
 cargo test            # integration tests (run inside src-tauri/)
 ```
+
+`npm run setup` (`scripts/setup.sh`) checks Node ≥ 20.12, cargo, and the
+system libraries, prints the exact install command for anything missing,
+installs the npm packages, and auto-repairs npm's optional-deps bug
+(npm/cli#4828) when it bites. It never installs toolchains itself — those
+stay manual, so it never touches your shell profile.
 
 ## Building on macOS
 
@@ -25,8 +31,11 @@ macOS bundles can only be built on a Mac (Tauri does not cross-compile).
 ```bash
 xcode-select --install                                               # Xcode Command Line Tools
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh       # Rust (rustup)
-brew install node                                                    # Node.js 20+ (or nvm)
+brew install node@22                                                 # Node.js 22 (or nvm) — needs ≥ 20.12
 ```
+
+After cloning, `npm run setup` verifies these prerequisites and prints the
+exact command for anything missing (it never installs toolchains itself).
 
 **Build:**
 

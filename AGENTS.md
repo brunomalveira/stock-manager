@@ -55,7 +55,7 @@ The bundle identifier is `com.brunomalveira.stockmanager`. Changing it changes t
 ## Commands
 
 ```bash
-npm install           # first setup (frontend deps)
+npm run setup         # first setup: toolchain check + npm install + npm/cli#4828 repair (scripts/setup.sh)
 npm run tauri dev     # run the app with hot reload — main development loop
 npm run tauri build   # produce installers/bundles for the current OS
 npm run build         # typecheck + build the frontend only
@@ -63,7 +63,12 @@ npm test              # frontend unit tests (Vitest) — projection math, alert 
 cargo test            # Rust integration tests (run inside src-tauri/) — migrations + app SQL
 ```
 
-Toolchain prerequisites: Node.js ≥ 20, Rust (stable), Tauri CLI v2 (devDependency `@tauri-apps/cli`).
+Toolchain prerequisites: Node.js ≥ 20.12 (the Vite 8/rolldown floor — older
+Node lacks `node:util` styleText), Rust (stable), Tauri CLI v2
+(devDependency `@tauri-apps/cli`). `npm run setup` (`scripts/setup.sh`)
+verifies all of this and prints the exact install command for anything
+missing; it never installs toolchains itself and never touches the shell
+profile.
 
 - **Linux build deps:** `libwebkit2gtk-4.1-dev`, `build-essential`, `curl`, `wget`, `file`, `libxdo-dev`, `libssl-dev`, `libayatana-appindicator3-dev`, `librsvg2-dev`.
 - **Windows:** WebView2 (preinstalled on Win 10/11) + MSVC Build Tools.
