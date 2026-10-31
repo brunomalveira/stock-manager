@@ -1,6 +1,7 @@
 use tauri::menu::{ContextMenu, MenuBuilder, MenuItemBuilder, SubmenuBuilder};
 use tauri::tray::TrayIconBuilder;
 use tauri::{Emitter, Manager};
+use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_sql::{Migration, MigrationKind};
 
 /// Local SQLite database. The file lives in the OS app-data directory for
@@ -87,6 +88,12 @@ fn show_item_menu(app: tauri::AppHandle, id: i64, window: tauri::Window) -> Resu
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_autostart::init(
+            MacosLauncher::LaunchAgent,
+            // Launched at login: start hidden — the tray icon and the alarm
+            // timer run without the window.
+            Some(vec!["--hidden"]),
+        ))
         .plugin(
             tauri_plugin_sql::Builder::default()
                 .add_migrations(DB_URL, migrations())
@@ -145,14 +152,21 @@ pub fn run() {
         .on_window_event(|window, event| {
             // Closing the window hides it: the app keeps running in the
             // background and the alarm timer keeps firing. Quit via the tray
-            // menu, ⌘Q, or the Dock. (Phase 2b adds a launchd agent for
-            // restart-survival.)
+            // menu, ⌘Q, or the Dock.
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
                 let _ = window.hide();
             }
         })
         .setup(|app| {
+            // Launched at login (autostart passes --hidden): start hidden —
+            // the tray icon and the alarm timer run without the window.
+            if std::env::args().any(|a| a == "--hidden") {
+                if let Some(w) = app.get_webview_window("main") {
+                    let _ = w.hide();
+                }
+            }
+
             // Tray icon: makes the background state visible and controllable.
             let open = MenuItemBuilder::with_id("tray-open", "Open Stock Manager").build(app)?;
             let quit = MenuItemBuilder::with_id("tray-quit", "Quit Stock Manager").build(app)?;

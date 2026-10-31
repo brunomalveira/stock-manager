@@ -1,6 +1,7 @@
 import Database from "@tauri-apps/plugin-sql";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { isPermissionGranted, requestPermission, sendNotification } from "@tauri-apps/plugin-notification";
 import { alertBody, shouldAlert } from "./alerts";
 import {
@@ -55,6 +56,9 @@ const tbody = document.querySelector("#items-body") as HTMLTableSectionElement;
 const emptyEl = document.querySelector("#empty") as HTMLElement;
 const addBtn = document.querySelector("#add-btn") as HTMLButtonElement;
 const itemCount = document.querySelector("#item-count") as HTMLElement;
+const settingsBtn = document.querySelector("#settings-btn") as HTMLButtonElement;
+const settingsSheet = document.querySelector("#settings-sheet") as HTMLElement;
+const launchAtLogin = document.querySelector("#launch-at-login") as HTMLInputElement;
 
 function showError(message: string): void {
   errorEl.textContent = message;
@@ -315,6 +319,23 @@ window.addEventListener("DOMContentLoaded", async () => {
   addBtn.addEventListener("click", openForm);
   form.addEventListener("submit", (e) => void handleSubmit(e));
   cancelBtn.addEventListener("click", closeForm);
+
+  // Settings sheet: launch-at-login toggle (tauri-plugin-autostart).
+  settingsBtn.addEventListener("click", () => {
+    settingsSheet.hidden = !settingsSheet.hidden;
+    if (!settingsSheet.hidden) {
+      void isEnabled().then((on: boolean) => {
+        launchAtLogin.checked = on;
+      });
+    }
+  });
+  launchAtLogin.addEventListener("change", () => {
+    if (launchAtLogin.checked) {
+      void enable();
+    } else {
+      void disable();
+    }
+  });
 
   // Native app menu: Add Item (⌘N).
   await listen("menu://add-item", () => openForm());
