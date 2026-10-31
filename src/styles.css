@@ -1,5 +1,52 @@
 :root {
   color-scheme: light dark;
+
+  /* Semantic color tokens — Apple-style values. On WebKit they upgrade to the
+     real dynamic system colors in the @supports block below, which follow the
+     system appearance AND the user's accessibility settings. */
+  --label: #1d1d1f;
+  --label-secondary: rgba(60, 60, 67, 0.6);
+  --label-tertiary: rgba(60, 60, 67, 0.3);
+  --separator: rgba(60, 60, 67, 0.2);
+  --canvas: #f5f5f7;
+  --surface: #ffffff;
+  --surface-raised: rgba(255, 255, 255, 0.85);
+  --fill-hover: rgba(120, 120, 128, 0.16);
+  --control-border: rgba(60, 60, 67, 0.28);
+  --accent: #0066cc;
+  --accent-on: #ffffff;
+  --warn: #d64545;
+  --warn-fill: rgba(214, 69, 69, 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --label: #f5f5f7;
+    --label-secondary: rgba(235, 235, 245, 0.6);
+    --label-tertiary: rgba(235, 235, 245, 0.3);
+    --separator: rgba(235, 235, 245, 0.16);
+    --canvas: #1e1e20;
+    --surface: #262628;
+    --surface-raised: rgba(48, 48, 50, 0.85);
+    --fill-hover: rgba(120, 120, 128, 0.24);
+    --control-border: rgba(235, 235, 245, 0.24);
+    --accent: #2997ff;
+    --accent-on: #ffffff;
+    --warn: #ff6b6b;
+    --warn-fill: rgba(255, 107, 107, 0.12);
+  }
+}
+
+/* WebKit only: the real dynamic system colors (macOS app-data webviews and
+   webkit2gtk). They adapt to the system appearance and honor settings like
+   increased contrast. */
+@supports (color: -apple-system-label) {
+  :root {
+    --label: -apple-system-label;
+    --label-secondary: -apple-system-secondary-label;
+    --label-tertiary: -apple-system-tertiary-label;
+    --separator: -apple-system-separator;
+  }
 }
 
 * {
@@ -12,15 +59,8 @@ body {
   font-size: 14px;
   line-height: 1.5;
   /* Solid fallback — on Linux/Windows the window is not transparent. */
-  background: #f5f5f7;
-  color: #1d1d1f;
-}
-
-@media (prefers-color-scheme: dark) {
-  body {
-    background: #1e1e20;
-    color: #f5f5f7;
-  }
+  background: var(--canvas);
+  color: var(--label);
 }
 
 /* macOS only (class set from main.ts): the window is transparent with the
@@ -48,16 +88,10 @@ html.macos body {
   padding: 12px 16px;
   margin: 0 -16px 16px;
   background: rgba(245, 245, 247, 0.72);
+  background: light-dark(rgba(245, 245, 247, 0.72), rgba(30, 30, 32, 0.72));
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-}
-
-@media (prefers-color-scheme: dark) {
-  .toolbar {
-    background: rgba(30, 30, 32, 0.72);
-    border-bottom-color: rgba(255, 255, 255, 0.1);
-  }
+  border-bottom: 1px solid var(--separator);
 }
 
 /* Clear the macOS traffic lights: with titleBarStyle "Overlay" they sit on
@@ -72,34 +106,29 @@ html.macos .toolbar {
   letter-spacing: -0.2px;
   margin: 0;
   flex: 1;
+  color: var(--label);
 }
 
 .count {
   font-size: 12px;
-  color: rgba(128, 128, 128, 1);
+  color: var(--label-secondary);
   font-variant-numeric: tabular-nums;
 }
 
 h2 {
   font-size: 15px;
   margin: 0 0 8px;
+  color: var(--label);
 }
 
 #item-form {
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--surface-raised);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--separator);
   border-radius: 10px;
   padding: 12px 16px 14px;
   margin-bottom: 16px;
-}
-
-@media (prefers-color-scheme: dark) {
-  #item-form {
-    background: rgba(48, 48, 50, 0.85);
-    border-color: rgba(255, 255, 255, 0.1);
-  }
 }
 
 .row {
@@ -116,13 +145,13 @@ h2 {
 
 label {
   min-width: 64px;
-  color: rgba(128, 128, 128, 1);
+  color: var(--label-secondary);
 }
 
 input,
 select {
   padding: 6px 8px;
-  border: 1px solid rgba(128, 128, 128, 0.45);
+  border: 1px solid var(--control-border);
   border-radius: 6px;
   background: transparent;
   color: inherit;
@@ -148,7 +177,7 @@ select {
 
 button {
   padding: 6px 12px;
-  border: 1px solid rgba(128, 128, 128, 0.45);
+  border: 1px solid var(--control-border);
   border-radius: 6px;
   background: transparent;
   color: inherit;
@@ -157,31 +186,33 @@ button {
 }
 
 button:hover {
-  background: rgba(128, 128, 128, 0.15);
+  background: var(--fill-hover);
 }
 
+/* The primary action renders filled with the accent, per HIG. */
 #submit-btn {
   font-weight: 600;
+  background: var(--accent);
+  border-color: transparent;
+  color: var(--accent-on);
+}
+
+#submit-btn:hover {
+  background: var(--accent);
+  opacity: 0.9;
 }
 
 .error {
-  color: #d64545;
+  color: var(--warn);
   margin: 0 0 12px;
 }
 
 /* Content layer: solid surface, never glass (Liquid Glass rule). */
 .content {
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  background: var(--surface);
+  border: 1px solid var(--separator);
   border-radius: 10px;
   padding: 4px 8px;
-}
-
-@media (prefers-color-scheme: dark) {
-  .content {
-    background: #262628;
-    border-color: rgba(255, 255, 255, 0.08);
-  }
 }
 
 table {
@@ -193,7 +224,7 @@ th,
 td {
   text-align: left;
   padding: 8px 10px;
-  border-bottom: 1px solid rgba(128, 128, 128, 0.25);
+  border-bottom: 1px solid var(--separator);
 }
 
 tr:last-child td {
@@ -202,11 +233,11 @@ tr:last-child td {
 
 th {
   font-weight: 600;
-  color: rgba(128, 128, 128, 1);
+  color: var(--label-secondary);
 }
 
 td.notes {
-  color: rgba(128, 128, 128, 1);
+  color: var(--label-secondary);
   max-width: 200px;
   overflow-wrap: anywhere;
 }
@@ -232,7 +263,7 @@ td.notes {
 .secondary {
   display: block;
   font-size: 11px;
-  color: rgba(128, 128, 128, 1);
+  color: var(--label-tertiary);
   margin-top: 2px;
 }
 
@@ -241,16 +272,16 @@ td.notes {
 }
 
 .alarm.muted {
-  color: rgba(128, 128, 128, 1);
+  color: var(--label-tertiary);
 }
 
 .alarm.warn {
-  color: #d64545;
+  color: var(--warn);
   font-weight: 600;
 }
 
 tr.warn-row td {
-  background: rgba(214, 69, 69, 0.08);
+  background: var(--warn-fill);
 }
 
 td button + button {
@@ -258,7 +289,7 @@ td button + button {
 }
 
 #empty {
-  color: rgba(128, 128, 128, 1);
+  color: var(--label-tertiary);
   padding: 16px 10px;
   margin: 0;
 }
