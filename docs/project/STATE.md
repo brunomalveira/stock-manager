@@ -6,8 +6,9 @@ close — current status only, no history chain.
 ## Current status
 
 - **Updated:** 2026-10-31
-- **Phase:** bootstrap — harness and docs in place, app not scaffolded yet
-- **Branch:** `main`
+- **Phase:** bootstrap — harness, docs and remote in place, app not scaffolded yet
+- **Branch:** `main` (tracks `origin/main`)
+- **Remote:** `git@github.com:brunomalveira/stock-manager.git` (private, GitHub)
 - **In progress:** nothing
 - **Blockers:** none
 - **Commit authorization:** granted for bootstrap/docs commits
