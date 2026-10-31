@@ -108,14 +108,16 @@ CREATE TABLE items (
 - Consumption projection & alarm (optional per item): consumed-per-day +
   alert-threshold fields; projection of remaining stock since
   `last_stocked_at`; row-level warning when days-to-zero ≤ threshold.
-- macOS UI treatment: transparent window with sidebar vibrancy, overlay
-  title bar, glass toolbar with the add-item sheet.
 - Native OS notifications when an item crosses its threshold (in-app timer,
   checked every 5 min; at most one alert per item per day). Phase 2 (launchd
   background agent) is approved and built when asked.
+- macOS UI treatment: transparent window with sidebar vibrancy, overlay
+  title bar, glass toolbar with the add-item sheet.
+- Semantic color tokens (`--label`, `--separator`, `--accent`, … in
+  `src/styles.css`) with a full dark-mode pass; on WebKit they resolve to the
+  real dynamic system colors.
 
 **Planned UI work (approved, not yet built):**
-- Semantic system colors + full dark-mode pass (WebKit `-apple-system-*` colors).
 - Native menu bar, standard keyboard shortcuts, row context menus.
 - DESIGN.md token spec (palette + typography as tokens).
 
