@@ -20,31 +20,38 @@ export interface Projection {
 }
 
 const DAY_MS = 86_400_000;
+/** The projection day ticks over at 23:59 local time, not midnight. */
+const TICK_MS = 60_000;
 
-/** 2 -> "2", 2.5 -> "2.5" (trims trailing zeros; quantity is REAL for kg-style units). */
-export function fmtQuantity(q: number): string {
-  return String(Number(q.toFixed(3)));
-}
-
-/** 3.25 days -> "3.3" (one decimal is enough for day-scale figures). */
-export function fmtDays(d: number): string {
-  return String(Number(d.toFixed(1)));
-}
-
-/** Days elapsed since the current stock amount was set (stock event). */
-export function daysSinceStock(item: ProjectionInput, now = Date.now()): number {
-  const baseline = item.last_stocked_at ?? item.created_at;
-  return Math.max(0, (now - Date.parse(baseline)) / DAY_MS);
+/** 2 -> "2", 2.4 -> "2", 2.5 -> "3" (stock is shown in whole units, rounded). */
+export function fmtInt(q: number): string {
+  return String(Math.round(q));
 }
 
 /**
- * Consumption projection: remaining ≈ quantity − rate × days since the
- * stock event. NULL consumed_per_day (or rate ≤ 0) = no projection.
+ * Whole days elapsed since the stock event, counted on the user's wall
+ * clock: every 23:59 boundary adds one day, so the projection ticks down
+ * once a day at 23:59 instead of continuously. (A DST shift can skew a
+ * boundary by an hour; Brazil observes no DST.)
+ */
+export function wholeDaysSinceStock(item: ProjectionInput, now = Date.now()): number {
+  const baseline = Date.parse(item.last_stocked_at ?? item.created_at);
+  const dayIndex = (t: number): number => {
+    const localMs = t - new Date(t).getTimezoneOffset() * 60_000;
+    return Math.floor((localMs + TICK_MS) / DAY_MS);
+  };
+  return Math.max(0, dayIndex(now) - dayIndex(baseline));
+}
+
+/**
+ * Consumption projection: remaining ≈ quantity − rate × whole days since
+ * the stock event (days tick over at 23:59 local). NULL consumed_per_day
+ * (or rate ≤ 0) = no projection.
  */
 export function projection(item: ProjectionInput, now = Date.now()): Projection | null {
   const rate = item.consumed_per_day ?? 0;
   if (rate <= 0) return null;
-  const daysSince = daysSinceStock(item, now);
+  const daysSince = wholeDaysSinceStock(item, now);
   const remaining = item.quantity - rate * daysSince;
   return { daysSince, remaining, daysToZero: remaining / rate };
 }
