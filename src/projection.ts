@@ -29,6 +29,16 @@ export function fmtInt(q: number): string {
 }
 
 /**
+ * The "unit" label pluralizes with the count ("1 unit", "3 units", and
+ * "0 units", matching English); other unit labels (kg, l, box, …) are
+ * count-neutral and stay as-is. The check uses the rounded display value.
+ */
+export function fmtUnit(unit: string, amount: number): string {
+  if (unit !== "unit") return unit;
+  return Math.round(amount) === 1 ? "unit" : "units";
+}
+
+/**
  * Whole days elapsed since the stock event, counted on the user's wall
  * clock: every 23:59 boundary adds one day, so the projection ticks down
  * once a day at 23:59 instead of continuously. (A DST shift can skew a

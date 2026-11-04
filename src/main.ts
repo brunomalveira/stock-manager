@@ -8,6 +8,7 @@ import { alertBody, shouldAlert } from "./alerts";
 import { parseCsv, toCsv, type CsvItem } from "./csv";
 import {
   fmtInt,
+  fmtUnit,
   isAlerting,
   projection,
 } from "./projection";
@@ -155,7 +156,8 @@ function render(): void {
     // Projected stock right now: the stocked amount minus one day of
     // consumption per 23:59 since the stock event, as whole units. Without
     // a consumption rate the stocked amount IS the current stock.
-    qty.textContent = `${fmtInt(p === null ? item.quantity : p.remaining)} ${item.unit}`;
+    const current = p === null ? item.quantity : p.remaining;
+    qty.textContent = `${fmtInt(current)} ${fmtUnit(item.unit, current)}`;
     if (alerting) qty.classList.add("warn");
     qtyCell.append(qty);
 
@@ -179,7 +181,7 @@ function render(): void {
     refillAmount.className = "refill-amount";
     // The amount set at the last stock event: any Edit quantity change
     // (up or down) restocks the item and updates this column.
-    refillAmount.textContent = `${fmtInt(item.quantity)} ${item.unit}`;
+    refillAmount.textContent = `${fmtInt(item.quantity)} ${fmtUnit(item.unit, item.quantity)}`;
     const refillDate = document.createElement("span");
     refillDate.className = "secondary";
     refillDate.textContent = fmtStockedDate(item.last_stocked_at ?? item.created_at);

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   fmtInt,
+  fmtUnit,
   isAlerting,
   projection,
   wholeDaysSinceStock,
@@ -27,6 +28,20 @@ describe("fmtInt", () => {
     expect(fmtInt(2.4)).toBe("2");
     expect(fmtInt(2.5)).toBe("3");
     expect(fmtInt(-0.4)).toBe("0");
+  });
+});
+
+describe("fmtUnit", () => {
+  test("pluralizes the unit label when the count is not 1", () => {
+    expect(fmtUnit("unit", 1)).toBe("unit");
+    expect(fmtUnit("unit", 3)).toBe("units");
+    expect(fmtUnit("unit", 0)).toBe("units");
+    expect(fmtUnit("unit", 1.4)).toBe("unit"); // displays as "1"
+  });
+
+  test("leaves other unit labels unchanged", () => {
+    expect(fmtUnit("kg", 1)).toBe("kg");
+    expect(fmtUnit("kg", 3)).toBe("kg");
   });
 });
 
