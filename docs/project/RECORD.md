@@ -101,8 +101,11 @@ every problem hit along the way with its fix. Current status lives in
 
 ## d) Referencing this project in another session
 
-- **Desktop Project `stock-manager`** — `/project stock-manager` anchors a
-  chat to this repo (workspace follows).
+- **Desktop Project `stock-manager`** — registered in the desktop app's
+  Projects (there is no `/project` slash command): ask Hermes in chat —
+  "switch to the stock-manager project" — and the chat's workspace moves
+  to this repo. Opening/working in the repo directory also anchors a
+  session (AGENTS.md auto-loads as project context).
 - **`AGENTS.md`** — the charter: read before any change (ground rules, data
   model, scope in/out, commands, definition of done).
 - **`docs/project/STATE.md`** — current status (phase, branch, blockers,
