@@ -269,21 +269,18 @@ td.notes {
   overflow-wrap: anywhere;
 }
 
-.qty-line {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.qty-btn {
-  padding: 2px 8px;
-  line-height: 1.2;
-}
-
 .qty {
-  display: inline-block;
-  min-width: 72px;
-  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Alarm state: the Quantity and Stock alarm values turn bold red (the row
+   keeps its tint and the alarm cell keeps the ⚠ prefix). */
+.qty.warn {
+  color: var(--warn);
+  font-weight: 700;
+}
+
+.refill-amount {
   font-variant-numeric: tabular-nums;
 }
 
@@ -304,7 +301,7 @@ td.notes {
 
 .alarm.warn {
   color: var(--warn);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 tr.warn-row td {

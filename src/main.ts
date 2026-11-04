@@ -7,9 +7,7 @@ import { isPermissionGranted, requestPermission, sendNotification } from "@tauri
 import { alertBody, shouldAlert } from "./alerts";
 import { parseCsv, toCsv, type CsvItem } from "./csv";
 import {
-  daysSinceStock,
-  fmtDays,
-  fmtQuantity,
+  fmtInt,
   isAlerting,
   projection,
 } from "./projection";
@@ -36,6 +34,17 @@ interface Item {
 
 const UNITS = ["unit", "kg", "g", "l", "ml", "box", "pack"];
 const DB_URL = "sqlite:stockmanager.db";
+
+/** "Nov 2" — the last stock event date, formatted for the locale at display time. */
+const stockedDateFormat = new Intl.DateTimeFormat(undefined, {
+  month: "short",
+  day: "numeric",
+});
+
+function fmtStockedDate(iso: string): string {
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? "—" : stockedDateFormat.format(date);
+}
 
 let db: Database;
 let items: Item[] = [];
@@ -141,32 +150,14 @@ function render(): void {
     nameCell.textContent = item.name;
 
     const qtyCell = document.createElement("td");
-    const qtyLine = document.createElement("div");
-    qtyLine.className = "qty-line";
-    const minus = document.createElement("button");
-    minus.type = "button";
-    minus.textContent = "−";
-    minus.className = "qty-btn";
-    minus.dataset.action = "adjust";
-    minus.dataset.delta = "-1";
-    minus.dataset.id = String(item.id);
-    minus.setAttribute("aria-label", `Decrease ${item.name}`);
     const qty = document.createElement("span");
     qty.className = "qty";
-    qty.textContent = `${fmtQuantity(item.quantity)} ${item.unit}`;
-    const plus = document.createElement("button");
-    plus.type = "button";
-    plus.textContent = "+";
-    plus.className = "qty-btn";
-    plus.dataset.action = "adjust";
-    plus.dataset.delta = "1";
-    plus.dataset.id = String(item.id);
-    plus.setAttribute("aria-label", `Increase ${item.name}`);
-    qtyLine.append(minus, qty, plus);
-    const stocked = document.createElement("span");
-    stocked.className = "secondary";
-    stocked.textContent = `stocked ${fmtDays(daysSinceStock(item))}d ago`;
-    qtyCell.append(qtyLine, stocked);
+    // Projected stock right now: the stocked amount minus one day of
+    // consumption per 23:59 since the stock event, as whole units. Without
+    // a consumption rate the stocked amount IS the current stock.
+    qty.textContent = `${fmtInt(p === null ? item.quantity : p.remaining)} ${item.unit}`;
+    if (alerting) qty.classList.add("warn");
+    qtyCell.append(qty);
 
     const alarmCell = document.createElement("td");
     alarmCell.className = "alarm";
@@ -177,10 +168,22 @@ function render(): void {
       alarmCell.textContent = "ran out";
       if (alerting) alarmCell.classList.add("warn");
     } else {
-      const text = `≈ ${fmtQuantity(p.remaining)} ${item.unit} left · ~${fmtDays(p.daysToZero)}d to empty`;
+      const text = `~${fmtInt(p.daysToZero)}d`;
       alarmCell.textContent = alerting ? `⚠ ${text}` : text;
       if (alerting) alarmCell.classList.add("warn");
     }
+
+    const refillCell = document.createElement("td");
+    refillCell.className = "refill";
+    const refillAmount = document.createElement("span");
+    refillAmount.className = "refill-amount";
+    // The amount set at the last stock event: any Edit quantity change
+    // (up or down) restocks the item and updates this column.
+    refillAmount.textContent = `${fmtInt(item.quantity)} ${item.unit}`;
+    const refillDate = document.createElement("span");
+    refillDate.className = "secondary";
+    refillDate.textContent = fmtStockedDate(item.last_stocked_at ?? item.created_at);
+    refillCell.append(refillAmount, refillDate);
 
     const notesCell = document.createElement("td");
     notesCell.textContent = item.notes;
@@ -199,23 +202,9 @@ function render(): void {
     deleteBtn.dataset.id = String(item.id);
     actionsCell.append(editBtn, deleteBtn);
 
-    tr.append(nameCell, qtyCell, alarmCell, notesCell, actionsCell);
+    tr.append(nameCell, qtyCell, alarmCell, refillCell, notesCell, actionsCell);
     tbody.append(tr);
   }
-}
-
-async function adjustQuantity(id: number, delta: number): Promise<void> {
-  const item = items.find((i) => i.id === id);
-  if (!item) return;
-  const next = Math.max(0, item.quantity + delta); // quantities can never go negative
-  if (next === item.quantity) return;
-  const now = new Date().toISOString();
-  // Any quantity change is a stock event: the projection baseline resets.
-  await db.execute(
-    "UPDATE items SET quantity = $1, updated_at = $2, last_stocked_at = $3 WHERE id = $4",
-    [next, now, now, id],
-  );
-  await refresh();
 }
 
 async function removeItem(item: Item): Promise<void> {
@@ -483,9 +472,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     if (!button) return;
     const id = Number(button.dataset.id);
     const action = button.dataset.action;
-    if (action === "adjust") {
-      void adjustQuantity(id, Number(button.dataset.delta));
-    } else if (action === "edit") {
+    if (action === "edit") {
       const item = items.find((i) => i.id === id);
       if (item) {
         openForm();
@@ -499,7 +486,8 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   await ensurePermission();
   await refresh();
-  // Keep "days since" and the projection fresh while the app sits open.
+  // Keep the projection fresh while the app sits open — the whole-day tick
+  // at 23:59 and the day-ago counter both move on their own.
   setInterval(() => render(), 60_000);
   // Autonomy phase 1: alarm checks while the app runs (launch-at-login adds
   // restart-survival: the OS relaunches the app at every login).
