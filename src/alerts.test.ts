@@ -66,6 +66,13 @@ describe("alertBody", () => {
     expect(alertBody(rice, stocked + 14 * HOUR)).toBe("Rice: ≈ 3 kg left · ~2d to empty");
   });
 
+  test("pluralizes the unit label with the count", () => {
+    const units = { ...base, unit: "unit" };
+    expect(alertBody(units, stocked + 14 * HOUR)).toBe("Rice: ≈ 3 units left · ~3d to empty");
+    const single = { ...units, quantity: 1 };
+    expect(alertBody(single, stocked + 14 * HOUR)).toBe("Rice: ≈ 1 unit left · ~1d to empty");
+  });
+
   test("reports ran out", () => {
     expect(alertBody(base, stocked + 4 * DAY)).toBe("Rice: ran out");
   });

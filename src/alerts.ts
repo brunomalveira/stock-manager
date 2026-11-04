@@ -2,7 +2,7 @@
  * Pure alert-decision helpers — no DOM, no Tauri imports.
  * Unit-testable with Vitest (docs/harness/TESTING.md, layer 2).
  */
-import { fmtInt, projection, type ProjectionInput } from "./projection";
+import { fmtInt, fmtUnit, projection, type ProjectionInput } from "./projection";
 
 /** At most one alert per item per day — re-alert only if still under threshold. */
 export const RE_ALERT_INTERVAL_MS = 86_400_000;
@@ -25,5 +25,5 @@ export function shouldAlert(item: AlertInput, now = Date.now()): boolean {
 export function alertBody(item: AlertInput, now = Date.now()): string {
   const p = projection(item, now)!;
   if (p.remaining <= 0) return `${item.name}: ran out`;
-  return `${item.name}: ≈ ${fmtInt(p.remaining)} ${item.unit} left · ~${fmtInt(p.daysToZero)}d to empty`;
+  return `${item.name}: ≈ ${fmtInt(p.remaining)} ${fmtUnit(item.unit, p.remaining)} left · ~${fmtInt(p.daysToZero)}d to empty`;
 }
